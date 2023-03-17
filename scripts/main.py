@@ -29,21 +29,22 @@ def on_ui_tabs():
                     # Merge config
                     gr.Textbox(label="Task name")
                     with gr.Box():
-                        gr.HTML(value="<span>merge config</span>")
-                        with gr.Row():
-                            human_folder_flag = gr.Textbox(label="Human model folder flag")
-                            secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), elem_id="modelmerger_secondary_model_name", label="Style model")
-                            create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_B")
-                            tertiary_model_name = gr.Dropdown(label="Tertiary model")
-                            create_refresh_button(tertiary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_C")
-                        multiplier = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Multiplier (M) - set to 0 to get model A', value=0.3, elem_id="modelmerger_interp_amount")
+                        with gr.Column():
+                            gr.HTML(value="<span>merge config</span>")
+                            with gr.Row():
+                                human_folder_flag = gr.Textbox(label="Human model folder flag")
+                                secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), elem_id="modelmerger_secondary_model_name", label="Style model")
+                                create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_B")
+                                tertiary_model_name = gr.Dropdown(label="Tertiary model")
+                                create_refresh_button(tertiary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_C")
+                            multiplier = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Multiplier (M) - set to 0 to get model A', value=0.3, elem_id="modelmerger_interp_amount")
                     # Merge txt2img
                     with gr.Box():
                         use_txt2img = gr.Checkbox(label="Use txt2img")
                         delete_model_after_txt2img = gr.Checkbox(label="Delete model after merge")
                         use_txt2img.change(fn=aa, inputs=use_txt2img, outputs=None)
-                        prompt = gr.Textbox(placeholde="Prompt", lines=3)
-                        negative_prompt = gr.Textbox(placeholder="Negative prompt", lines=3)
+                        prompt = gr.Textbox(label="Prompt", lines=3)
+                        negative_prompt = gr.Textbox(label="Negative prompt", lines=3)
                         human_weight = gr.Slider(minimum=0.0, maximum=2.0, step=0.1, label='human weight', value=1.0, elem_id="human_wight")
                         seed = gr.Textbox(label="Seed")
                         cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='CFG Scale', value=1.0, elem_id="cfg_scale")
