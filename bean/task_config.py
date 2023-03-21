@@ -1,9 +1,29 @@
+import json
+import os
+from extensions.sd_extension_auto_tool.utils.share import auto_tool_models_path
+
 class AutoTaskConfig:
     def __init__(self, data):
         self.task_name = data["task_name"]
         self.task_merge = AutoTaskMerge(data["task_merge"])
         self.task_txt2img = AutoTaskTxt2Img(data["task_txt2img"])
         self.task_lark = AutoTaskLark(data["task_lark"])
+
+    def save(self):
+        if self.task_name is not None and len(self.task_name):
+            data = self.get_config(self.task_name)
+            if data is None:
+                with open(os.path.join(auto_tool_models_path, f"{self.task_name}.json"), 'w') as f:
+                    json.dump(data, f)
+
+    def get_config(self, task_name):
+        if os.path.exists(os.path.join(auto_tool_models_path, f"{task_name}.json")):
+            with open(f"{task_name}.json", 'r') as f:
+                data = f.read()
+                if data is not None and len(data):
+                    return json.loads(data)
+        else:
+            print("file not exist")
 
 class AutoTaskMerge:
     def __init__(self, data):
