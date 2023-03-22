@@ -1,10 +1,8 @@
-from extensions.sd_extension_auto_tool.auto_tool.ui_function import save_config
+from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskTxt2Img
 from modules import script_callbacks
-
 import gradio as gr
 from modules.ui import create_refresh_button
 import modules
-import extensions.sd_extension_auto_tool.utils.share
 
 refresh_symbol = '\U0001f504'  # 🔄
 
@@ -26,10 +24,8 @@ def on_ui_tabs():
                         gr.Button(value="Load task")
                 with gr.Column():
                     gr.HTML(value="<span class='hh'>Task config</span>")
-                    create_hint = gr.Label(label="label",value="aaaa")
-                    create_hint2 = gr.Text(label="text",value="bbbb")
-                    create_hint3 = gr.Textbox(label="textbox",value="ccccc")
-                    gr.Button(value="Create task")
+                    create_hint = gr.Label(lable="notice", value="", visible=False)
+                    create_task = gr.Button(value="Create task")
                     # Merge config
                     task_name = gr.Textbox(label="Task name")
                     with gr.Box():
@@ -45,45 +41,113 @@ def on_ui_tabs():
                     # Merge txt2img
                     with gr.Box():
                         use_txt2img = gr.Checkbox(label="Use txt2img")
-                        delete_model_after_txt2img = gr.Checkbox(label="Delete model after merge")
-                        use_txt2img.change(fn=aa, inputs=use_txt2img, outputs=None)
-                        prompt = gr.Textbox(label="Prompt", lines=3)
-                        negative_prompt = gr.Textbox(label="Negative prompt", lines=3)
-                        human_weight = gr.Slider(minimum=0.0, maximum=2.0, step=0.1, label='human weight', value=1.0, elem_id="human_wight")
-                        seed = gr.Textbox(label="Seed")
-                        cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='CFG Scale', value=7.0, elem_id="cfg_scale")
-                        batch_size = gr.Slider(minimum=1.0, maximum=8.0, step=1.0, label='Batch Size', value=1.0, elem_id="batch_size")
-                        sample_method = gr.Text(lable="Sampling method")
-                        sample_step = gr.Slider(minimum=1.0, maximum=150.0, step=1.0, label='Sampling steps', value=20.0, elem_id="sample_step")
+                        delete_model_after_txt2img = gr.Checkbox(label="Delete model after merge", visible=False)
+                        prompt = gr.Textbox(label="Prompt", lines=3, visible=False)
+                        negative_prompt = gr.Textbox(label="Negative prompt", lines=3, visible=False)
+                        human_weight = gr.Slider(minimum=0.0, maximum=2.0, step=0.1, label='human weight', value=1.0, elem_id="human_wight", visible=False)
+                        seed = gr.Number(label="Seed", value=-1, visible=False)
+                        cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='CFG Scale', value=7.0, elem_id="cfg_scale", visible=False)
+                        batch_size = gr.Slider(minimum=1.0, maximum=8.0, step=1.0, label='Batch Size', value=1.0, elem_id="batch_size", visible=False)
+                        sample_method = gr.Text(lable="Sampling method", visible=False)
+                        sample_steps = gr.Slider(minimum=1.0, maximum=150.0, step=1.0, label='Sampling steps', value=20.0, elem_id="sample_step", visible=False)
+                        group_txt2img = [delete_model_after_txt2img, prompt, negative_prompt, human_weight, seed, cfg_scale, batch_size, sample_method, sample_steps, sample_steps]
+
+                        def is_show_txt2img(enable):
+                            result = {}
+                            for i in group_txt2img:
+                                result[i] = gr.update(visible=enable)
+                            return result
+
+                        use_txt2img.change(fn=is_show_txt2img, inputs=use_txt2img, outputs=group_txt2img)
                     # Feishu
                     with gr.Box():
                         use_lark = gr.Checkbox(label="Use lark")
-                        use_lark.change(fn=aa, inputs=use_lark, outputs=None)
-                        at_after_finish = gr.Textbox(label="@ someone after finish")
-                    save_config_button = gr.Button(label="Save")
-                    save_config_button.click(fn=save_config, inputs=[task_name,
-                                                                     human_folder_flag,
-                                                                     secondary_model_name,
-                                                                     tertiary_model_name,
-                                                                     delete_model_after_txt2img,
-                                                                     multiplier,
-                                                                     use_txt2img,
-                                                                     prompt,
-                                                                     negative_prompt,
-                                                                     human_weight,
-                                                                     seed,
-                                                                     cfg_scale,
-                                                                     sample_method,
-                                                                     sample_step,
-                                                                     batch_size,
-                                                                     use_lark,
-                                                                     at_after_finish
-                                                                     ], outputs=create_hint)
+                        at_after_finish = gr.Textbox(label="@ someone after finish", visible=False)
+                        use_lark_group = [at_after_finish]
+
+                        def is_show_lark(enable):
+                            result = {}
+                            for i in use_lark_group:
+                                result[i] = gr.update(visible=enable)
+                            return result
+
+                        use_lark.change(fn=is_show_lark, inputs=use_lark, outputs=use_lark_group)
+
+                    def save_config(task_name: str,
+                                    human_model_dir_flag: str,
+                                    style_model: str,
+                                    base_model_flag: str,
+                                    delete_after_merge: bool,
+                                    multiplier: float,
+                                    use_txt2img: bool,
+                                    prompt: str,
+                                    negative_prompt: str,
+                                    human_weight: float,
+                                    seed: int,
+                                    cfg_scale: int,
+                                    sampler_index: str,
+                                    steps: int,
+                                    batch_size: int,
+                                    use_lark: bool,
+                                    at_user: str
+                                    ):
+                        if not len(task_name):
+                            return {create_hint: gr.update(value="Please input task name", visible=True)}
+                        if not len(human_model_dir_flag):
+                            return {create_hint: gr.update(value="Please input human flag ", visible=True)}
+                        if not len(style_model):
+                            return {create_hint: gr.update(value="Please select style model", visible=True)}
+                        if not len(base_model_flag):
+                            return {create_hint: gr.update(value="Please select tertiary model", visible=True)}
+                        if use_txt2img:
+                            if not len(prompt):
+                                return {create_hint: gr.update(value="please input prompt", visible=True)}
+                            if not len(negative_prompt):
+                                return {create_hint: gr.update(value="please input negative prompt", visible=True)}
+                        if use_lark:
+                            return {create_hint: gr.update(value="please input user lark", visible=True)}
+                        task_config = AutoTaskConfig()
+                        task_config.task_name = task_name
+                        task_config.task_merge.human_model_dir_flag = human_model_dir_flag
+                        task_config.task_merge.style_model = style_model
+                        task_config.task_merge.base_model_flag = base_model_flag
+                        task_config.task_merge.delete_after_merge = delete_after_merge
+                        task_config.task_merge.interp_method = "Add difference"
+                        task_config.task_merge.multiplier = multiplier
+                        task_config.task_merge.checkpoint_format = "ckpt"
+                        task_config.task_txt2img.use_txt2img = use_txt2img
+                        task_config.task_txt2img.prompt = prompt
+                        task_config.task_txt2img.negative_prompt = negative_prompt
+                        task_config.task_txt2img.human_weight = human_weight
+                        task_config.task_txt2img.seed = seed
+                        task_config.task_txt2img.cfg_scale = cfg_scale
+                        task_config.task_txt2img.sampler_index = sampler_index
+                        task_config.task_txt2img.steps = steps
+                        task_config.task_txt2img.batch_size = batch_size
+                        task_config.task_lark.use_lark = use_lark
+                        task_config.task_lark.at_user = at_user
+                        task_config.save()
+                        return {create_hint: gr.update(value="Save success", visible=True)}
+
+                    create_task.click(fn=save_config, inputs=[task_name,
+                                                              human_folder_flag,
+                                                              secondary_model_name,
+                                                              tertiary_model_name,
+                                                              delete_model_after_txt2img,
+                                                              multiplier,
+                                                              use_txt2img,
+                                                              prompt,
+                                                              negative_prompt,
+                                                              human_weight,
+                                                              seed,
+                                                              cfg_scale,
+                                                              sample_method,
+                                                              sample_steps,
+                                                              batch_size,
+                                                              use_lark,
+                                                              at_after_finish
+                                                              ], outputs=create_hint)
 
     return (auto_tool_interface, 'Auto Tool', 'auto_tool_tab'),
-
-def aa(radio):
-    print(radio)
-    pass
 
 script_callbacks.on_ui_tabs(on_ui_tabs)
