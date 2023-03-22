@@ -1,30 +1,39 @@
-from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskTxt2Img
+from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import task_list, refresh_task_list
+from extensions.sd_extension_auto_tool.auto_tool.ui_function import choose_task_fn, save_config, auto_delete_task, fill_choose_task, start_auto_task, stop_auto_task
 from modules import script_callbacks
 import gradio as gr
 from modules.ui import create_refresh_button
 import modules
+from modules.ui_components import ToolButton
 
 refresh_symbol = '\U0001f504'  # 🔄
+fill_values_symbol = "\U0001f4d2"  # 📒
 
 def on_ui_tabs():
     with gr.Blocks(analytics_enabled=False) as auto_tool_interface:
         with gr.Tab(label="Console"):
             with gr.Row():
-                gr.Button(value="Start")
-                gr.Button(value="Stop")
-                pass
+                start_task = gr.Button(value="Start")
+                stop_task = gr.Button(value="Stop")
             with gr.Column():
-                gr.Dropdown(label="Choose Task")
+                task_log = gr.Label(value="aaa", visible=False)
+                with gr.Row():
+                    choose_task = gr.Textbox(label="Choose Task", lines=3)
+                    fill_task_button = ToolButton(value=fill_values_symbol, elem_id="Fill task button")
+                    fill_task_button.click(fn=fill_choose_task, outputs=choose_task)
         with gr.Tab(label="Task"):
             with gr.Row():
                 with gr.Column():
                     gr.HTML(value="<span class='hh'>Task choose</span>")
-                    gr.Dropdown(label="Choose Task")
                     with gr.Row():
-                        gr.Button(value="Load task")
+                        select_task = gr.Dropdown(label="Choose Task", choices=task_list)
+                        create_refresh_button(select_task, refresh_task_list, lambda: {"choices": task_list}, "refresh_select_task")
+                    with gr.Row():
+                        load_task = gr.Button(value="Load task")
+                        delete_task = gr.Button(value="Delete task")
                 with gr.Column():
                     gr.HTML(value="<span class='hh'>Task config</span>")
-                    create_hint = gr.Label(lable="notice", value="", visible=False)
+                    create_hint = gr.Label(lable="notice", value="hint", visible=False)
                     create_task = gr.Button(value="Create task")
                     # Merge config
                     task_name = gr.Textbox(label="Task name")
@@ -32,7 +41,7 @@ def on_ui_tabs():
                         with gr.Column():
                             gr.HTML(value="<span>merge config</span>")
                             with gr.Row():
-                                human_folder_flag = gr.Textbox(label="Human model folder flag")
+                                human_folder_flag = gr.Textbox(label="Human folder flag")
                                 secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), label="Style model")
                                 create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_B")
                                 tertiary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), label="Tertiary model")
@@ -70,84 +79,29 @@ def on_ui_tabs():
                             for i in use_lark_group:
                                 result[i] = gr.update(visible=enable)
                             return result
-
-                        use_lark.change(fn=is_show_lark, inputs=use_lark, outputs=use_lark_group)
-
-                    def save_config(task_name: str,
-                                    human_model_dir_flag: str,
-                                    style_model: str,
-                                    base_model_flag: str,
-                                    delete_after_merge: bool,
-                                    multiplier: float,
-                                    use_txt2img: bool,
-                                    prompt: str,
-                                    negative_prompt: str,
-                                    human_weight: float,
-                                    seed: int,
-                                    cfg_scale: int,
-                                    sampler_index: str,
-                                    steps: int,
-                                    batch_size: int,
-                                    use_lark: bool,
-                                    at_user: str
-                                    ):
-                        if not len(task_name):
-                            return {create_hint: gr.update(value="Please input task name", visible=True)}
-                        if not len(human_model_dir_flag):
-                            return {create_hint: gr.update(value="Please input human flag ", visible=True)}
-                        if not len(style_model):
-                            return {create_hint: gr.update(value="Please select style model", visible=True)}
-                        if not len(base_model_flag):
-                            return {create_hint: gr.update(value="Please select tertiary model", visible=True)}
-                        if use_txt2img:
-                            if not len(prompt):
-                                return {create_hint: gr.update(value="please input prompt", visible=True)}
-                            if not len(negative_prompt):
-                                return {create_hint: gr.update(value="please input negative prompt", visible=True)}
-                        if use_lark:
-                            return {create_hint: gr.update(value="please input user lark", visible=True)}
-                        task_config = AutoTaskConfig()
-                        task_config.task_name = task_name
-                        task_config.task_merge.human_model_dir_flag = human_model_dir_flag
-                        task_config.task_merge.style_model = style_model
-                        task_config.task_merge.base_model_flag = base_model_flag
-                        task_config.task_merge.delete_after_merge = delete_after_merge
-                        task_config.task_merge.interp_method = "Add difference"
-                        task_config.task_merge.multiplier = multiplier
-                        task_config.task_merge.checkpoint_format = "ckpt"
-                        task_config.task_txt2img.use_txt2img = use_txt2img
-                        task_config.task_txt2img.prompt = prompt
-                        task_config.task_txt2img.negative_prompt = negative_prompt
-                        task_config.task_txt2img.human_weight = human_weight
-                        task_config.task_txt2img.seed = seed
-                        task_config.task_txt2img.cfg_scale = cfg_scale
-                        task_config.task_txt2img.sampler_index = sampler_index
-                        task_config.task_txt2img.steps = steps
-                        task_config.task_txt2img.batch_size = batch_size
-                        task_config.task_lark.use_lark = use_lark
-                        task_config.task_lark.at_user = at_user
-                        task_config.save()
-                        return {create_hint: gr.update(value="Save success", visible=True)}
-
-                    create_task.click(fn=save_config, inputs=[task_name,
-                                                              human_folder_flag,
-                                                              secondary_model_name,
-                                                              tertiary_model_name,
-                                                              delete_model_after_txt2img,
-                                                              multiplier,
-                                                              use_txt2img,
-                                                              prompt,
-                                                              negative_prompt,
-                                                              human_weight,
-                                                              seed,
-                                                              cfg_scale,
-                                                              sample_method,
-                                                              sample_steps,
-                                                              batch_size,
-                                                              use_lark,
-                                                              at_after_finish
-                                                              ], outputs=create_hint)
-
+        all_para = [task_name,
+                    human_folder_flag,
+                    secondary_model_name,
+                    tertiary_model_name,
+                    delete_model_after_txt2img,
+                    multiplier,
+                    use_txt2img,
+                    prompt,
+                    negative_prompt,
+                    human_weight,
+                    seed,
+                    cfg_scale,
+                    sample_method,
+                    sample_steps,
+                    batch_size,
+                    use_lark,
+                    at_after_finish]
+        start_task.click(fn=start_auto_task, inputs=choose_task, outputs=task_log)
+        stop_task.click(fn=stop_auto_task, outputs=task_log)
+        use_lark.change(fn=is_show_lark, inputs=use_lark, outputs=use_lark_group)
+        create_task.click(fn=save_config, inputs=all_para, outputs=create_hint)
+        load_task.click(fn=choose_task_fn, _js="clear_loaded", inputs=select_task, outputs=all_para)
+        delete_task.click(fn=auto_delete_task, inputs=select_task, outputs=create_hint)
     return (auto_tool_interface, 'Auto Tool', 'auto_tool_tab'),
 
 script_callbacks.on_ui_tabs(on_ui_tabs)

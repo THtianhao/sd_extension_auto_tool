@@ -24,14 +24,21 @@ class AutoTaskTxt2Img(BaseModel):
     negative_prompt: str = ""
     human_weight: float = 1.0
     seed: int = -1
-    cfg_scale: str = ""
-    sampler_index: str = ""
+    cfg_scale: float = 1.0
+    sampler_index: int = ""
     steps: int = 20
     batch_size: int = 1
+    batch_count: int = 1
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 class AutoTaskLark(BaseModel):
     use_lark: bool = False
     at_user: str = ""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 class AutoTaskConfig(BaseModel):
     task_name = ""

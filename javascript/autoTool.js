@@ -1,9 +1,9 @@
-//function clear_loaded() {
-//    for (let arg in arguments){
-//
-//    }
-//    return "";
-//}
+function clear_loaded() {
+    for (let arg in arguments){
+    }
+    alert("clear_loaded")
+    return "";
+}
 
 function filterArgs(argsCount, arguments) {
     let args_out = [];
