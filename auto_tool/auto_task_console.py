@@ -1,30 +1,46 @@
+import os
+
+import gradio as gr
+
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import read_task_json
-from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
-from modules import extras, sd_samplers, shared
-from modules.call_queue import wrap_gradio_gpu_call
-from modules.processing import StableDiffusionProcessingTxt2Img
+from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img, AutoTaskLark
+from extensions.sd_extension_auto_tool.utils.share import ckpt_dir
+from modules import extras, sd_samplers
 from modules.sd_models import list_models, checkpoints_list
 from modules.txt2img import txt2img
 
-def start_task(tasks_name):
+def stop_console_task():
+    pass
+
+def start_console_task(tasks_name):
     tasks_split = tasks_name.split(', ')
     for task_name in tasks_split:
         task_json = read_task_json(task_name)
         config: AutoTaskConfig = AutoTaskConfig.parse_obj(task_json)
         id_task = 0
+        style_model_cut = config.task_merge.style_model.split('/')[-1].split('.')[0]
         human_models = filter_human_models(config.task_merge.human_model_dir_flag)
-        for human_model in human_models:
-            name = ""
-            merge_task(human_model, name, config.task_merge)
+        if not human_models:
+            return gr.update(value="human models not exist", visible=True)
+        for human_index, human_model in enumerate(human_models):
+            human_model_cut = human_model.split('/')[-1].split('.')[0]
+            save_model_name = f"AutoTool/{style_model_cut}/{style_model_cut}_{human_model_cut}"
+            merge_task(human_model, save_model_name, config.task_merge)
             txt2img_task(human_model, config.task_txt2img)
-            lark_task(human_model, config)
+            # lark_task(human_model, config)
 
 def filter_human_models(filter):
     list_models()
-    result = [checkpoint['title'] for checkpoint in checkpoints_list.values() if filter in checkpoint['title']]
+    result = [checkpoint for checkpoint in checkpoints_list.values() if filter in checkpoint.split('/')]
     return result
 
 def merge_task(human_model, name, merge: AutoTaskMerge):
+    models_path = os.path.join(ckpt_dir, name)
+    if not os.path.exists(models_path):
+        os.makedirs(models_path)
+    else:
+        print(f"{name} already had")
+        return
     result = extras.run_modelmerger(0,
                                     human_model,
                                     merge.style_model,
@@ -37,6 +53,7 @@ def merge_task(human_model, name, merge: AutoTaskMerge):
                                     0,
                                     None,
                                     "")
+    print(f"Merge {name} success")
 
 def txt2img_task(human_name, para: AutoTaskTxt2Img):
     txt2img_prompt_styles = []
@@ -89,5 +106,5 @@ def validate_sampler_name(name):
         pass
     return name
 
-def lark_task(human_model, config):
-    pass
+def lark_task(human_model, lark_config: AutoTaskLark):
+    if not lark_config.at_user: return

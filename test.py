@@ -2,7 +2,7 @@ import json
 import os
 
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig
-from extensions.sd_extension_auto_tool.utils.share import auto_tool_models_path
+from extensions.sd_extension_auto_tool.utils.share import auto_tool_root_path
 
 if __name__ == "__main__":
     # task_config = AutoTaskConfig()
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # task_config.save()
     def set_task_list():
         global task_list
-        for root, dirs, files in os.walk(auto_tool_models_path):
+        for root, dirs, files in os.walk(auto_tool_root_path):
             for file in files:
                 print(os.path.join(root, file))
     set_task_list()

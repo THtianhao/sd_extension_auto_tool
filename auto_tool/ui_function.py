@@ -5,10 +5,10 @@ import gradio as gr
 
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import refresh_task_list, task_list
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig
-from extensions.sd_extension_auto_tool.utils.share import auto_tool_models_path
+from extensions.sd_extension_auto_tool.utils.share import auto_tool_tasks_path
 
 def choose_task_fn(task_name):
-    with open(os.path.join(auto_tool_models_path, f"{task_name}.json"), 'r') as f:
+    with open(os.path.join(auto_tool_tasks_path, f"{task_name}.json"), 'r') as f:
         task_json = json.load(f)
         task_config = AutoTaskConfig.parse_obj(task_json)
         return [task_config.task_name,
@@ -87,7 +87,8 @@ def save_config(task_name: str,
 
 def auto_delete_task(task_name):
     if len(task_name):
-        os.remove(os.path.join(auto_tool_models_path, f"{task_name}.json"))
+        os.remove(os.path.join(auto_tool_tasks_path, f"{task_name}.json"))
+        refresh_task_list()
         return gr.update(value="Delete success", visible=True)
 
 def fill():
@@ -96,9 +97,3 @@ def fill():
 def fill_choose_task():
     refresh_task_list()
     return fill()
-
-def start_auto_task(task_name: str):
-    tasks = task_name.split(', ')
-
-def stop_auto_task():
-    pass
