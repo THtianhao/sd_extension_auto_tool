@@ -4,13 +4,15 @@ from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_c
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import task_list, refresh_task_list, read_task_json
 from extensions.sd_extension_auto_tool.auto_tool.ui_function import choose_task_fn, save_config, auto_delete_task, fill_choose_task
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
-from extensions.sd_extension_auto_tool.utils.share import ckpt_dir
-from modules import script_callbacks, extras
+from extensions.sd_extension_auto_tool.utils.share import auto_tool_root_path
+from modules import script_callbacks, extras, sd_samplers, shared
 import gradio as gr
 
+from modules.processing import StableDiffusionProcessingTxt2Img, process_images
+from modules.scripts import scripts_txt2img
 from modules.sd_models import list_models, checkpoints_list
 from modules.sd_samplers import samplers
-from modules.txt2img import txt2img
+from modules.shared import opts
 from modules.ui import create_refresh_button
 import modules
 from modules.ui_components import ToolButton
@@ -22,14 +24,18 @@ def on_ui_tabs():
     with gr.Blocks(analytics_enabled=False) as auto_tool_interface:
         with gr.Tab(label="Console"):
             with gr.Row():
-                start_task = gr.Button(value="Start")
-                stop_task = gr.Button(value="Stop")
-            with gr.Column():
-                task_log = gr.Label(value="aaa", visible=False)
-                with gr.Row():
-                    choose_task = gr.Textbox(label="Choose Task", lines=3)
-                    fill_task_button = ToolButton(value=fill_values_symbol, elem_id="Fill task button")
-                    fill_task_button.click(fn=fill_choose_task, outputs=choose_task)
+                with gr.Column():
+                    with gr.Row():
+                        start_task = gr.Button(value="Start")
+                        stop_task = gr.Button(value="Stop")
+                    task_log = gr.Label(value="aaa", visible=False)
+                    with gr.Row():
+                        choose_task = gr.Textbox(label="Choose Task", lines=3)
+                        fill_task_button = ToolButton(value=fill_values_symbol, elem_id="Fill task button")
+                        fill_task_button.click(fn=fill_choose_task, outputs=choose_task)
+                with gr.Column():
+                    gr.Button(value="Get lark code")
+                    gr.Textbox(label="Lark code")
         with gr.Tab(label="Task"):
             with gr.Row():
                 with gr.Column():
@@ -118,8 +124,8 @@ def on_ui_tabs():
                     return gr.update(value=f"human models {config.task_merge.human_model_dir_flag} not exist", visible=True)
                 for human_index, human_model in enumerate(human_models):
                     human_model_cut = human_model.split('/')[-1].split('.')[0]
-                    save_model_name = f"AutoTool/{style_model_cut}/{style_model_cut}_{human_model_cut}_{config.task_merge.multiplier}"
-                    merge_task(human_model, save_model_name, config.task_merge)
+                    save_model_name = f"{style_model_cut}_{human_model_cut}_{str(config.task_merge.multiplier).replace('.', '_')}"
+                    merge_task(human_model, style_model_cut, save_model_name, config.task_merge)
                     txt2img_task(human_model, config.task_txt2img)
                     # lark_task(human_model, config)
 
@@ -128,12 +134,14 @@ def on_ui_tabs():
             result = [checkpoint.title for checkpoint in checkpoints_list.values() if filter in checkpoint.title.split('/')]
             return result
 
-        def merge_task(human_model, name, merge: AutoTaskMerge):
-            auto_dir = os.path.join(ckpt_dir, name)
-            if not os.path.exists(auto_dir):
-                os.makedirs(auto_dir)
-            else:
-                print(f"{name} already had")
+        def merge_task(human_model, style_dir, file_name, merge: AutoTaskMerge):
+            auto_style_dir = os.path.join(auto_tool_root_path, style_dir)
+            if not os.path.exists(auto_style_dir):
+                os.makedirs(auto_style_dir)
+            file = os.path.join(auto_style_dir, f"{file_name}.ckpt")
+            filter_model = [model.title for model in checkpoints_list.values() if f"{file_name}.ckpt" in model.title]
+            if len(filter_model):
+                print(f"File {os.path.join(style_dir, file_name)} already exist")
                 return
             result = extras.run_modelmerger(0,
                                             human_model,
@@ -142,56 +150,108 @@ def on_ui_tabs():
                                             merge.interp_method,
                                             merge.multiplier,
                                             False,
-                                            name,
+                                            file,
                                             merge.checkpoint_format,
                                             0,
                                             None,
                                             "")
+            print(f"Merge result = {result}")
 
-        def txt2img_task(human_name, para: AutoTaskTxt2Img):
-            txt2img_prompt_styles = []
-            restore_faces = False,
-            tiling = False,
-            subseed = -1,
-            subseed_strength = 0.0,
-            seed_resize_from_h = -1,
-            seed_resize_from_w = -1,
-            seed_checkbox = False,
-            width = 512,
-            height = 512,
-            denoising_strength = 0.0
-            enable_hr = False,
-            hr_scale = 2,
-            hr_upscaler = "Latent",
-            hr_second_pass_steps = 0,
-            hr_resize_x = 0,
-            hr_resize_y = 0,
-            override_settings = {}
-            result = txt2img("",
-                             f"({human_name}:{para.human_weight}){para.prompt}",
-                             para.negative_prompt,
-                             txt2img_prompt_styles,
-                             para.steps,
-                             para.sampler_index,
-                             False,
-                             False,
-                             para.batch_count,
-                             para.batch_size,
-                             para.cfg_scale,
+        def txt2img_task(human_name, auto_para: AutoTaskTxt2Img):
+            if not auto_para.use_txt2img: return
 
-                             para.seed,
-                             -1, 0.0, -1, -1, False,
-                             512,
-                             512,
-                             False,
+            def validate_sampler_name(name):
+                config = sd_samplers.all_samplers_map.get(name, None)
+                if config is None:
+                    print(f"toto error sampler_name{name}")
+                return name
 
-                             denoising_strength,
-                             2,
-                             "Latent",
-                             0,
-                             0,
-                             0,
-                             override_settings)
+            def init_script_args(replace_argu, selectable_scripts, selectable_idx, script_runner):
+                # find max idx from the scripts in runner and generate a none array to init script_args
+                last_arg_index = 1
+                for script in script_runner.scripts:
+                    if last_arg_index < script.args_to:
+                        last_arg_index = script.args_to
+                # None everywhere except position 0 to initialize script args
+                script_args = [None] * last_arg_index
+                # position 0 in script_arg is the idx+1 of the selectable script that is going to be run when using scripts.scripts_*2img.run()
+                if selectable_scripts:
+                    script_args[selectable_scripts.args_from:selectable_scripts.args_to] = replace_argu
+                    script_args[0] = selectable_idx + 1
+                else:
+                    # when [0] = 0 no selectable script to run
+                    script_args[0] = 0
+
+                # # Now check for always on scripts
+                # if request.alwayson_scripts and (len(request.alwayson_scripts) > 0):
+                #     for alwayson_script_name in request.alwayson_scripts.keys():
+                #         alwayson_script = self.get_script(alwayson_script_name, script_runner)
+                #         if alwayson_script == None:
+                #             print(f"always on script {alwayson_script_name} not found")
+                #         # Selectable script in always on script param check
+                #         if alwayson_script.alwayson == False:
+                #             print(f"Cannot have a selectable script in the always on scripts params")
+                #         # always on script with no arg should always run so you don't really need to add them to the requests
+                #         if "args" in request.alwayson_scripts[alwayson_script_name]:
+                #             script_args[alwayson_script.args_from:alwayson_script.args_to] = request.alwayson_scripts[alwayson_script_name]["args"]
+                return script_args
+
+            def get_selectable_script(script_name, script_runner):
+                if script_name is None or script_name == "":
+                    return None, None
+                script_idx = script_name_to_index(script_name, script_runner.selectable_scripts)
+                script = script_runner.selectable_scripts[script_idx]
+                return script, script_idx
+
+            def script_name_to_index(name, scripts):
+                try:
+                    return [script.title().lower() for script in scripts].index(name.lower())
+                except:
+                    print(f"Script '{name}' not found")
+
+            script_runner = scripts_txt2img
+            if not script_runner.scripts:
+                script_runner.initialize_scripts(False)
+            script_name = None
+            selectable_scripts, selectable_script_idx = get_selectable_script(script_name, script_runner)
+            script_args = init_script_args([], selectable_scripts, selectable_script_idx, script_runner)
+            auto_prompt = f"({human_name}:{auto_para.human_weight}), {auto_para.prompt}"
+            p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model,
+                                                 enable_hr=False,
+                                                 denoising_strength=0.0,
+                                                 seed=auto_para.seed,
+                                                 cfg_scale=auto_para.cfg_scale,
+                                                 prompt=auto_prompt,
+                                                 negative_prompt=auto_para.negative_prompt,
+                                                 sampler_name=sd_samplers.samplers[auto_para.sampler_index].name,
+                                                 steps=auto_para.steps,
+                                                 batch_size=auto_para.batch_size,
+                                                 n_iter=auto_para.batch_count,
+                                                 subseed=-1,
+                                                 subseed_strength=0.0,
+                                                 seed_resize_from_h=1,
+                                                 seed_resize_from_w=1,
+                                                 styles=['anime'],
+                                                 hr_scale=2.0,
+                                                 hr_upscaler='Latent',
+                                                 hr_second_pass_steps=0,
+                                                 hr_resize_x=0,
+                                                 hr_resize_y=0,
+                                                 )
+            p.scripts = script_runner
+            p.outpath_grids = opts.outdir_txt2img_grids
+            p.outpath_samples = opts.outdir_txt2img_samples
+            shared.state.begin()
+
+            if selectable_scripts != None:
+                p.script_args = script_args
+                processed = scripts_txt2img.run(p, *p.script_args)  # Need to pass args as list here
+            else:
+                p.script_args = tuple(script_args)  # Need to pass args as tuple here
+                processed = process_images(p)
+            shared.state.end()
+            images = processed.images
+            print(images)
 
         start_task.click(fn=start_console_task, inputs=choose_task, outputs=task_log)
         stop_task.click(fn=stop_console_task, outputs=task_log)
