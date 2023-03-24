@@ -9,13 +9,13 @@ from extensions.sd_extension_auto_tool.bean.lark_response import TokenResponse
 from extensions.sd_extension_auto_tool.bean.lark_user_response import UserResponseData
 from extensions.sd_extension_auto_tool.utils.share import auto_lark_config
 
-lark_base_url = "https://open.feishu.cn"
-get_access_token = f"{lark_base_url}/open-apis/auth/v3/tenant_access_token/internal"
-get_user_token = f"{lark_base_url}/open-apis/authen/v1/access_token"
-get_pre_code = f"{lark_base_url}/open-apis/authen/v1/index"
-get_refresh_token = f"{lark_base_url}/open-apis/authen/v1/refresh_access_token"
-lark_get_root_token = f"{lark_base_url}/open-apis/drive/explorer/v2/root_folder/meta"
-lark_create_sheet = f"{lark_base_url}/open-apis/sheets/v3/spreadsheets"
+url_lark_base = "https://open.feishu.cn"
+url_access_token = f"{url_lark_base}/open-apis/auth/v3/tenant_access_token/internal"
+url_user_token = f"{url_lark_base}/open-apis/authen/v1/access_token"
+url_pre_code = f"{url_lark_base}/open-apis/authen/v1/index"
+url_refresh_token = f"{url_lark_base}/open-apis/authen/v1/refresh_access_token"
+url_lark_root_token = f"{url_lark_base}/open-apis/drive/explorer/v2/root_folder/meta"
+url_lark_create_sheet = f"{url_lark_base}/open-apis/sheets/v3/spreadsheets"
 
 tenant_access_token = ""
 user_access_token = ""
@@ -55,9 +55,9 @@ def get_or_refresh_save_user_token(lark_code: str):
 
 def getToken(app_id, app_secret):
     global tenant_access_token
-    print(f"access token = {get_access_token}")
+    print(f"access token = {url_access_token}")
     payload = {"app_id": app_id, "app_secret": app_secret}
-    response = requests.session().post(url=get_access_token, json=payload)
+    response = requests.session().post(url=url_access_token, json=payload)
     if response.status_code == 200:
         dict = json.loads(response.content)
         bean = TokenResponse(**dict)
@@ -85,7 +85,7 @@ def get_user_access_token(code):
         "grant_type": "authorization_code",
         "code": code
     }
-    response = requests.session().post(url=get_user_token, headers=get_tenant_headers(), json=payload)
+    response = requests.session().post(url=url_user_token, headers=get_tenant_headers(), json=payload)
     if response.status_code == 200:
         dict = json.loads(response.content)
         if dict['code'] == 0:
@@ -103,7 +103,7 @@ def refresh_user_access_token(user_refresh_token):
         "grant_type": "refresh_token",
         "refresh_token": user_refresh_token
     }
-    response = requests.session().post(url=get_refresh_token, headers=get_tenant_headers(), json=payload)
+    response = requests.session().post(url=url_refresh_token, headers=get_tenant_headers(), json=payload)
     if response.status_code == 200:
         dict = json.loads(response.content)
         if dict['code'] == 0:
@@ -117,7 +117,7 @@ def refresh_user_access_token(user_refresh_token):
 
 def get_root_token():
     global user_access_token
-    response = requests.session().get(url=lark_get_root_token, headers=get_user_headers())
+    response = requests.session().get(url=url_lark_root_token, headers=get_user_headers())
     if response.status_code == 200:
         content = json.loads(response.content)
         if content['code'] == 0:
@@ -133,21 +133,21 @@ def create_sheet(name, root_token):
         "title": name,
         "folder_token": root_token
     }
-    response = requests.session().post(url=lark_create_sheet, headers=get_user_headers(), json=payload)
+    response = requests.session().post(url=url_lark_create_sheet, headers=get_user_headers(), json=payload)
     if response.status_code == 200:
         content = json.loads(response.content)
         if content['code'] == 0:
             return content['data']['spreadsheet']
 
 def query_sheetId(sheet_token):
-    response = requests.session().get(url=f"{lark_base_url}/open-apis/sheets/v3/spreadsheets/{sheet_token}/sheets/query", headers=get_user_headers())
+    response = requests.session().get(url=f"{url_lark_base}/open-apis/sheets/v3/spreadsheets/{sheet_token}/sheets/query", headers=get_user_headers())
     if response.status_code == 200:
         content = json.loads(response.content)
         if content['code'] == 0:
             return content['data']['sheets'][0]['sheet_id']
 
 def put_sheet(sheet_token, value):
-    response = requests.session().put(url=f"{lark_base_url}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values", headers=get_user_headers(), json=value)
+    response = requests.session().put(url=f"{url_lark_base}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values", headers=get_user_headers(), json=value)
     print(f"qut_sheet = {response.content}")
 
 def post_image(sheet_token, range, image):
@@ -163,7 +163,7 @@ def post_image(sheet_token, range, image):
         "image": image_bytes,
         "name": "demo.png"
     }
-    response = requests.session().post(url=f"{lark_base_url}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values_image",
+    response = requests.session().post(url=f"{url_lark_base}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values_image",
                                        headers=get_user_headers(),
                                        data=json.dumps(payload))
     print(f"post_image = {response.content}")
