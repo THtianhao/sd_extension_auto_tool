@@ -9,7 +9,7 @@ from extensions.sd_extension_auto_tool.bean.lark_response import TokenResponse
 from extensions.sd_extension_auto_tool.bean.lark_user_response import UserResponseData
 from extensions.sd_extension_auto_tool.utils.share import auto_lark_config
 
-url_lark_base = r"https://open.feishu.cn"
+url_lark_base = f"https://open.feishu.cn"
 url_access_token = f"{url_lark_base}/open-apis/auth/v3/tenant_access_token/internal"
 url_user_token = f"{url_lark_base}/open-apis/authen/v1/access_token"
 url_pre_code = f"{url_lark_base}/open-apis/authen/v1/index"
@@ -44,14 +44,15 @@ def save_lark_config(token=""):
 def get_or_refresh_save_user_token(lark_code: str):
     if not len(lark_code): return
     global user_access_token
-    response = get_token('cli_a483ea8b94e3100e', 'UhJeWk7YxAgzhbc6mOz6xh7Gkfwu6eGS')
-    if response is not None:
-        if len(user_access_token):
-            return refresh_user_access_token(user_access_token)
-        else:
-            return get_user_access_token(lark_code)
-    else:
-        return "Get token fail"
+    print("aaa")
+    # response = get_token('cli_a483ea8b94e3100e', 'UhJeWk7YxAgzhbc6mOz6xh7Gkfwu6eGS')
+    # if response is not None:
+    #     if len(user_access_token):
+    #         return refresh_user_access_token(user_access_token)
+    #     else:
+    #         return get_user_access_token(lark_code)
+    # else:
+    #     return "Get token fail"
 
 def get_token(app_id, app_secret):
     global tenant_access_token
