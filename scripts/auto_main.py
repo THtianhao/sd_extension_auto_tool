@@ -7,7 +7,7 @@ from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_c
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import task_list, refresh_task_list, read_task_json
 from extensions.sd_extension_auto_tool.auto_tool.ui_function import choose_task_fn, save_config, auto_delete_task, fill_choose_task
 from extensions.sd_extension_auto_tool.auto_tool.lark_api import getPreCodeUrl, get_or_refresh_save_user_token, get_root_token, create_sheet, query_sheetId, \
-    put_sheet, post_image, url_access_token
+    put_sheet, post_image, get_access_token
 from extensions.sd_extension_auto_tool.bean.lark_task import LarkTask
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
 from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path
@@ -43,16 +43,16 @@ def on_ui_tabs():
                 with gr.Column():
                     get_lark_code = gr.Button(value="Get lark code")
                     get_lark_code.click(_js="redirectToLark", fn=None)
-                    lark_code = gr.Textbox(label="Lark code", visible=(len(url_access_token()) == 0))
-                    verify_lark = gr.Button(value="Verify lark code", visible=(len(url_access_token()) == 0))
-                    lark_label = gr.Label(visible=(len(url_access_token()) != 0), value="Lark verify success")
+                    lark_code = gr.Textbox(label="Lark code", visible=(len(get_access_token()) == 0))
+                    verify_lark = gr.Button(value="Verify lark code", visible=(len(get_access_token()) == 0))
+                    lark_label = gr.Label(visible=(len(get_access_token()) != 0), value="Lark verify success")
 
                     def verify_lark_code(code: str):
                         if len(code):
                             get_user_token_result = get_or_refresh_save_user_token(code)
                         else:
                             return {lark_label: gr.update(visible=True, value="Please input lark code first")}
-                        visible = len(url_access_token()) == 0
+                        visible = len(get_access_token()) == 0
                         return {lark_code: gr.update(visible=visible),
                                 verify_lark: gr.update(visible=visible),
                                 lark_label: gr.update(visible=True, value=get_user_token_result)}
@@ -174,7 +174,7 @@ def on_ui_tabs():
                 lark_task.error = True
                 lark_task.error_message = "Upload lark no image"
                 return
-            if not len(url_access_token()):
+            if not len(get_access_token()):
                 lark_task.error = True
                 lark_task.error_message = "lark token is nul"
                 return
