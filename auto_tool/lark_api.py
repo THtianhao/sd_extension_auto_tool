@@ -1,21 +1,53 @@
 import io
 import json
+import os
 
 import requests
 
-from extensions.sd_extension_auto_tool.bean.feishu_response import TokenResponse
-from extensions.sd_extension_auto_tool.bean.feishu_user_response import UserResponseData
+from extensions.sd_extension_auto_tool.bean.lark_config import LarkConfig
+from extensions.sd_extension_auto_tool.bean.lark_response import TokenResponse
+from extensions.sd_extension_auto_tool.bean.lark_user_response import UserResponseData
+from extensions.sd_extension_auto_tool.utils.share import auto_lark_config
 
-feishu_base_url = "https://open.feishu.cn"
-get_access_token = f"{feishu_base_url}/open-apis/auth/v3/tenant_access_token/internal"
-get_user_token = f"{feishu_base_url}/open-apis/authen/v1/access_token"
-get_pre_code = f"{feishu_base_url}/open-apis/authen/v1/index"
-get_refresh_token = f"{feishu_base_url}/open-apis/authen/v1/refresh_access_token"
-feishu_get_root_token = f"{feishu_base_url}/open-apis/drive/explorer/v2/root_folder/meta"
-feishu_create_sheet = f"{feishu_base_url}/open-apis/sheets/v3/spreadsheets"
+lark_base_url = "https://open.feishu.cn"
+get_access_token = f"{lark_base_url}/open-apis/auth/v3/tenant_access_token/internal"
+get_user_token = f"{lark_base_url}/open-apis/authen/v1/access_token"
+get_pre_code = f"{lark_base_url}/open-apis/authen/v1/index"
+get_refresh_token = f"{lark_base_url}/open-apis/authen/v1/refresh_access_token"
+lark_get_root_token = f"{lark_base_url}/open-apis/drive/explorer/v2/root_folder/meta"
+lark_create_sheet = f"{lark_base_url}/open-apis/sheets/v3/spreadsheets"
 
 tenant_access_token = ""
 user_access_token = ""
+user_lark_token_key = "lark_user_token"
+
+def read_lark_config():
+    global user_access_token
+    if os.path.exists(auto_lark_config):
+        with open(auto_lark_config, 'r') as f:
+            task_json = json.load(f)
+            if task_json is not None:
+                user_access_token = task_json[user_lark_token_key]
+            return task_json
+
+def save_lark_config(token=""):
+    with open(auto_lark_config, 'w') as f:
+        config = LarkConfig()
+        config.lark_user_token = token
+        lark_config_json = config.dict()
+        json.dump(lark_config_json, f)
+
+def get_or_refresh_save_user_token(lark_code: str):
+    if not len(lark_code): return
+    global user_access_token
+    response = getToken('cli_a483ea8b94e3100e', 'UhJeWk7YxAgzhbc6mOz6xh7Gkfwu6eGS')
+    if response is not None:
+        if len(user_access_token):
+            return refresh_user_access_token(user_access_token)
+        else:
+            return get_user_access_token(lark_code)
+    else:
+        return "Get token fail"
 
 def getToken(app_id, app_secret):
     global tenant_access_token
@@ -26,10 +58,7 @@ def getToken(app_id, app_secret):
         bean = TokenResponse(**dict)
         if bean.code == 0:
             tenant_access_token = bean.tenant_access_token
-            print(f"access token = {tenant_access_token}")
             return bean
-        else:
-            print(f"get access token fail")
 
 def get_tenant_headers():
     global tenant_access_token
@@ -57,7 +86,10 @@ def get_user_access_token(code):
         if dict['code'] == 0:
             bean = UserResponseData(**dict['data'])
             user_access_token = bean.access_token
-            return bean
+            save_lark_config(user_access_token)
+            return "Lark verify success"
+    save_lark_config()
+    return "Lark code expired, please get lark code again"
 
 def refresh_user_access_token(user_refresh_token):
     global user_access_token
@@ -71,11 +103,13 @@ def refresh_user_access_token(user_refresh_token):
         if dict['code'] == 0:
             bean = UserResponseData(**dict['data'])
             user_access_token = bean.access_token
-            session_success = True
-            return bean
+            save_lark_config(user_access_token)
+            return "Refresh token success"
+    save_lark_config()
+    return "Lark code expired,please get lark code again"
 
 def get_root_token():
-    response = requests.session().get(url=feishu_get_root_token, headers=get_user_headers())
+    response = requests.session().get(url=lark_get_root_token, headers=get_user_headers())
     if response.status_code == 200:
         content = json.loads(response.content)
         if content['code'] == 0:
@@ -87,21 +121,21 @@ def create_sheet(name, root_token):
         "title": name,
         "folder_token": root_token
     }
-    response = requests.session().post(url=feishu_create_sheet, headers=get_user_headers(), json=payload)
+    response = requests.session().post(url=lark_create_sheet, headers=get_user_headers(), json=payload)
     if response.status_code == 200:
         content = json.loads(response.content)
         if content['code'] == 0:
             return content['data']['spreadsheet']
 
 def query_sheetId(sheet_token):
-    response = requests.session().get(url=f"{feishu_base_url}/open-apis/sheets/v3/spreadsheets/{sheet_token}/sheets/query", headers=get_user_headers())
+    response = requests.session().get(url=f"{lark_base_url}/open-apis/sheets/v3/spreadsheets/{sheet_token}/sheets/query", headers=get_user_headers())
     if response.status_code == 200:
         content = json.loads(response.content)
         if content['code'] == 0:
             return content['data']['sheets'][0]['sheet_id']
 
-def qut_sheet(sheet_token, value):
-    response = requests.session().put(url=f"{feishu_base_url}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values", headers=get_user_headers(), json=value)
+def put_sheet(sheet_token, value):
+    response = requests.session().put(url=f"{lark_base_url}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values", headers=get_user_headers(), json=value)
     print(f"qut_sheet = {response.content}")
 
 def post_image(sheet_token, range, image):
@@ -117,7 +151,7 @@ def post_image(sheet_token, range, image):
         "image": image_bytes,
         "name": "demo.png"
     }
-    response = requests.session().post(url=f"{feishu_base_url}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values_image",
+    response = requests.session().post(url=f"{lark_base_url}/open-apis/sheets/v2/spreadsheets/{sheet_token}/values_image",
                                        headers=get_user_headers(),
                                        data=json.dumps(payload))
     print(f"post_image = {response.content}")
@@ -128,3 +162,5 @@ def set_token(user_token):
 
 def getPreCodeUrl():
     return "https://open.feishu.cn/open-apis/authen/v1/index?app_id=cli_a483ea8b94e3100e&redirect_uri=http://127.0.0.1"
+
+read_lark_config()

@@ -1,10 +1,9 @@
 import json
 import os
-from typing import Union, Dict
 
 from pydantic import BaseModel
 
-from extensions.sd_extension_auto_tool.utils.share import  auto_tool_tasks_path
+from extensions.sd_extension_auto_tool.utils.share import  auto_tasks_path
 
 class AutoTaskMerge(BaseModel):
     human_model_dir_flag: str = ""
@@ -50,12 +49,12 @@ class AutoTaskConfig(BaseModel):
         super().__init__(**kwargs)
 
     def save(self):
-        with open(os.path.join(auto_tool_tasks_path, f"{self.task_name}.json"), 'w') as f:
+        with open(os.path.join(auto_tasks_path, f"{self.task_name}.json"), 'w') as f:
             json.dump(self.dict(), f, indent=4)
             return "success"
 
     def get_config(self, task_name):
-        if os.path.exists(os.path.join(auto_tool_tasks_path, f"{task_name}.json")):
+        if os.path.exists(os.path.join(auto_tasks_path, f"{task_name}.json")):
             with open(f"{task_name}.json", 'r') as f:
                 data = f.read()
                 if data is not None and len(data):

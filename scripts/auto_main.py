@@ -1,10 +1,15 @@
 import os
+import shutil
+import webbrowser
+from datetime import datetime
 
 from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_console_task
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import task_list, refresh_task_list, read_task_json
 from extensions.sd_extension_auto_tool.auto_tool.ui_function import choose_task_fn, save_config, auto_delete_task, fill_choose_task
+from extensions.sd_extension_auto_tool.auto_tool.lark_api import  getPreCodeUrl, get_or_refresh_save_user_token, user_access_token, get_root_token, create_sheet, query_sheetId, \
+    put_sheet, post_image
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
-from extensions.sd_extension_auto_tool.utils.share import auto_tool_root_path
+from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path
 from modules import script_callbacks, extras, sd_samplers, shared
 import gradio as gr
 
@@ -34,8 +39,29 @@ def on_ui_tabs():
                         fill_task_button = ToolButton(value=fill_values_symbol, elem_id="Fill task button")
                         fill_task_button.click(fn=fill_choose_task, outputs=choose_task)
                 with gr.Column():
-                    gr.Button(value="Get lark code")
-                    gr.Textbox(label="Lark code")
+                    get_lark_code = gr.Button(value="Get lark code")
+
+                    def open_code_website():
+                        webbrowser.open_new_tab(getPreCodeUrl())
+
+                    get_lark_code.click(fn=open_code_website)
+                    lark_code = gr.Textbox(label="Lark code", visible=(len(user_access_token) == 0))
+                    verify_lark = gr.Button(value="Verify lark code", visible=(len(user_access_token) == 0))
+                    lark_label = gr.Label(visible=(len(user_access_token) != 0), value="Lark verify success")
+
+                    def verify_lark_code(code: str):
+                        if len(code):
+                            get_user_token_result = get_or_refresh_save_user_token(code)
+                        else:
+                            return {lark_label: gr.update(visible=True, value="Please input lark code first")}
+                        visible = len(user_access_token) == 0
+
+                        return {lark_code: gr.update(visible=visible),
+                                verify_lark: gr.update(visible=visible),
+                                lark_label: gr.update(visible=True, value=get_user_token_result)}
+
+                    verify_lark.click(fn=verify_lark_code, inputs=lark_code, outputs=[lark_code, verify_lark, lark_label])
+
         with gr.Tab(label="Task"):
             with gr.Row():
                 with gr.Column():
@@ -61,7 +87,7 @@ def on_ui_tabs():
                                 create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_B")
                                 tertiary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), label="Tertiary model")
                                 create_refresh_button(tertiary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_C")
-                            multiplier = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Multiplier (M) - set to 0 to get model A', value=0.3, elem_id="modelmerger_interp_amount")
+                            multiplier = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Multiplier (M) - set to 0 to get model A', value=1.0, elem_id="modelmerger_interp_amount")
                     # Merge txt2img
                     with gr.Box():
                         use_txt2img = gr.Checkbox(label="Use txt2img")
@@ -72,7 +98,7 @@ def on_ui_tabs():
                         seed = gr.Number(label="Seed", value=-1, visible=False)
                         cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='CFG Scale', value=7.0, elem_id="cfg_scale", visible=False)
                         batch_size = gr.Slider(minimum=1.0, maximum=8.0, step=1.0, label='Batch Size', value=1.0, elem_id="batch_size", visible=False)
-                        sample_method = gr.Dropdown(label='Sampling method', choices=[x.name for x in samplers], value=samplers[0].name, type="index")
+                        sample_method = gr.Dropdown(label='Sampling method', choices=[x.name for x in samplers], value=samplers[0].name, type="index", visible=False)
                         sample_steps = gr.Slider(minimum=1.0, maximum=150.0, step=1.0, label='Sampling steps', value=20.0, elem_id="sample_step", visible=False)
                         group_txt2img = [delete_model_after_txt2img, prompt, negative_prompt, human_weight, seed, cfg_scale, batch_size, sample_method, sample_steps, sample_steps]
 
@@ -117,7 +143,6 @@ def on_ui_tabs():
             for task_name in tasks_split:
                 task_json = read_task_json(task_name)
                 config: AutoTaskConfig = AutoTaskConfig.parse_obj(task_json)
-                id_task = 0
                 style_model_cut = config.task_merge.style_model.split('/')[-1].split('.')[0]
                 human_models = filter_human_models(config.task_merge.human_model_dir_flag)
                 if not human_models:
@@ -126,8 +151,110 @@ def on_ui_tabs():
                     human_model_cut = human_model.split('/')[-1].split('.')[0]
                     save_model_name = f"{style_model_cut}_{human_model_cut}_{str(config.task_merge.multiplier).replace('.', '_')}"
                     merge_task(human_model, style_model_cut, save_model_name, config.task_merge)
-                    txt2img_task(human_model, config.task_txt2img)
-                    # lark_task(human_model, config)
+                    images = txt2img_task(human_model, config.task_txt2img)
+                    upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut)
+                    if config.task_merge.delete_after_merge:
+                        delete_after_finish(style_model_cut)
+
+        def delete_after_finish(style_cut):
+            path = os.path.join(auto_merge_model_path, style_cut)
+            if os.path.exists(path):
+                shutil.rmtree(path)
+
+        def upload_lark(index, total_len, images, config: AutoTaskConfig, style_model_cut, human_model_cut):
+            file_token = None
+            sheet_id = None
+            links = []
+            if not config.task_lark.use_lark: return ""
+            if not len(images): return "Upload lark no image"
+            if not len(user_access_token): return "lark token is null"
+            if index == 0:
+                file_token, sheet_id, link = create_lark_sheet(style_model_cut)
+                links.append(link)
+                upload_feishu(index, file_token, sheet_id, config, human_model_cut)
+                upload_images(index, file_token, sheet_id, images)
+            if index == total_len - 1:
+                at_when_finished(config.task_lark.at_user, file_token, sheet_id, index + 3)
+
+        def create_lark_sheet(style_model_cut):
+            time_format = datetime.now().strftime("%H:%M:%S")
+            feishu_folder_name = f'{style_model_cut}_{time_format}'
+            root_token = get_root_token()
+            sheet = create_sheet(feishu_folder_name, root_token)
+            file_token = sheet['spreadsheet_token']
+            link = sheet['url']
+            sheet_id = query_sheetId(file_token)
+            create_sheet_title(file_token, sheet_id)
+            return file_token, sheet_id, link
+
+        def upload_feishu(index, file_token, sheet_id, config: AutoTaskConfig, human_model_cut):
+            if file_token is not None:
+                line = {
+                    "valueRange": {
+                        "range": f"{sheet_id}!E{index + 2}:M{index + 2}",
+                        "values": [
+                            [
+                                human_model_cut,
+                                config.task_merge.style_model,
+                                config.task_txt2img.prompt,
+                                config.task_txt2img.negative_prompt,
+                                sd_samplers.samplers[config.task_txt2img.sampler_index].name,
+                                config.task_txt2img.steps,
+                                config.task_txt2img.cfg_scale,
+                                config.task_txt2img.seed,
+                                config.task_merge.multiplier,
+                            ]
+                        ]
+                    }
+                }
+                put_sheet(file_token, line)
+
+        def create_sheet_title(file_token, sheet_id):
+            title = {
+                "valueRange": {
+                    "range": f"{sheet_id}!A1:M1",
+                    "values": [
+                        [
+                            "效果图1", "效果图2", "效果图3", "效果图4", "人物资源", "风格资源", "提示词", "反向提示词", "采样方式", "采样步数", "CFG Scale", "seed", "Checkpoint Multiplier"
+                        ]
+                    ]
+                }
+            }
+            put_sheet(file_token, title)
+
+        def upload_images(index, file_token, sheet_id, images):
+            for image_index, image in enumerate(images):
+                column_flag = ""
+                if image_index == 0:
+                    column_flag = "A"
+                elif image_index == 1:
+                    column_flag = "B"
+                elif image_index == 2:
+                    column_flag = "C"
+                elif image_index == 3:
+                    column_flag = "D"
+                post_image(file_token, f"{sheet_id}!{column_flag}{index + 2}:{column_flag}{index + 2}", image)
+
+        def at_when_finished(at_email, file_token, sheet_id, line):
+            if len(at_email) == 0:
+                return
+            test_value = {
+                "valueRange": {
+                    "range": f"{sheet_id}!A{line}:A{line}",
+                    "values": [
+                        [
+                            {
+                                "type": "mention",
+                                "text": f"{at_email}",
+                                "textType": "email",
+                                "notify": True,
+                                "grantReadPermission": True
+                            }
+                        ]
+                    ]
+                }
+            }
+            put_sheet(file_token, test_value)
 
         def filter_human_models(filter):
             list_models()
@@ -135,7 +262,7 @@ def on_ui_tabs():
             return result
 
         def merge_task(human_model, style_dir, file_name, merge: AutoTaskMerge):
-            auto_style_dir = os.path.join(auto_tool_root_path, style_dir)
+            auto_style_dir = os.path.join(auto_merge_model_path, style_dir)
             if not os.path.exists(auto_style_dir):
                 os.makedirs(auto_style_dir)
             file = os.path.join(auto_style_dir, f"{file_name}.ckpt")
@@ -251,7 +378,7 @@ def on_ui_tabs():
                 processed = process_images(p)
             shared.state.end()
             images = processed.images
-            print(images)
+            return images
 
         start_task.click(fn=start_console_task, inputs=choose_task, outputs=task_log)
         stop_task.click(fn=stop_console_task, outputs=task_log)

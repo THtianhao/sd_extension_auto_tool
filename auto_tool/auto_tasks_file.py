@@ -1,13 +1,13 @@
 import json
 import os
 
-from extensions.sd_extension_auto_tool.utils.share import  auto_tool_tasks_path
+from extensions.sd_extension_auto_tool.utils.share import  auto_tasks_path
 
 task_list = []
 
 def set_task_list():
     global task_list
-    for root, dirs, files in os.walk(auto_tool_tasks_path):
+    for root, dirs, files in os.walk(auto_tasks_path):
         for file in files:
             task_name = file.split('.')[0]
             task_list.append(task_name)
@@ -19,7 +19,7 @@ def refresh_task_list():
     return set_task_list()
 
 def read_task_json(task_name):
-    with open(os.path.join(auto_tool_tasks_path, f"{task_name}.json"), 'r') as f:
+    with open(os.path.join(auto_tasks_path, f"{task_name}.json"), 'r') as f:
         task_json = json.load(f)
         return task_json
 

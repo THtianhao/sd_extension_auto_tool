@@ -5,10 +5,11 @@ import gradio as gr
 
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import refresh_task_list, task_list
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig
-from extensions.sd_extension_auto_tool.utils.share import auto_tool_tasks_path
+from extensions.sd_extension_auto_tool.utils.share import auto_tasks_path
+from modules import sd_samplers
 
 def choose_task_fn(task_name):
-    with open(os.path.join(auto_tool_tasks_path, f"{task_name}.json"), 'r') as f:
+    with open(os.path.join(auto_tasks_path, f"{task_name}.json"), 'r') as f:
         task_json = json.load(f)
         task_config = AutoTaskConfig.parse_obj(task_json)
         return [task_config.task_name,
@@ -23,7 +24,7 @@ def choose_task_fn(task_name):
                 task_config.task_txt2img.human_weight,
                 task_config.task_txt2img.seed,
                 task_config.task_txt2img.cfg_scale,
-                task_config.task_txt2img.sampler_index,
+                sd_samplers.samplers[task_config.task_txt2img.sampler_index].name,
                 task_config.task_txt2img.steps,
                 task_config.task_txt2img.batch_size,
                 task_config.task_lark.use_lark,
@@ -41,7 +42,7 @@ def save_config(task_name: str,
                 human_weight: float,
                 seed: int,
                 cfg_scale: int,
-                sampler_index: str,
+                sampler_index: int,
                 steps: int,
                 batch_size: int,
                 use_lark: bool,
@@ -60,8 +61,8 @@ def save_config(task_name: str,
             return gr.update(value="please input prompt", visible=True)
         if not len(negative_prompt):
             return gr.update(value="please input negative prompt", visible=True)
-    if use_lark:
-        return gr.update(value="please input user lark", visible=True)
+    if sampler_index is None:
+        return gr.update(value="please select one sampling method", visible=True)
     task_config = AutoTaskConfig()
     task_config.task_name = task_name
     task_config.task_merge.human_model_dir_flag = human_model_dir_flag
@@ -87,7 +88,7 @@ def save_config(task_name: str,
 
 def auto_delete_task(task_name):
     if len(task_name):
-        os.remove(os.path.join(auto_tool_tasks_path, f"{task_name}.json"))
+        os.remove(os.path.join(auto_tasks_path, f"{task_name}.json"))
         refresh_task_list()
         return gr.update(value="Delete success", visible=True)
 
