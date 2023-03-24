@@ -54,9 +54,7 @@ def get_or_refresh_save_user_token(lark_code: str):
         return "Get token fail"
 
 def get_token(app_id, app_secret):
-    print("accesstoken")
-    print("accesstokenx")
-    print("accesstokeny")
+    global tenant_access_token
     payload = {"app_id": app_id, "app_secret": app_secret}
     response = requests.session().post(url="https://open.feishu.cn", json=payload)
     if response.status_code == 200:
