@@ -44,15 +44,14 @@ def save_lark_config(token=""):
 def get_or_refresh_save_user_token(lark_code: str):
     if not len(lark_code): return
     global user_access_token
-    print("aaa")
-    # response = get_token('cli_a483ea8b94e3100e', 'UhJeWk7YxAgzhbc6mOz6xh7Gkfwu6eGS')
-    # if response is not None:
-    #     if len(user_access_token):
-    #         return refresh_user_access_token(user_access_token)
-    #     else:
-    #         return get_user_access_token(lark_code)
-    # else:
-    #     return "Get token fail"
+    response = get_token('cli_a483ea8b94e3100e', 'UhJeWk7YxAgzhbc6mOz6xh7Gkfwu6eGS')
+    if response is not None:
+        if len(user_access_token):
+            return refresh_user_access_token(user_access_token)
+        else:
+            return get_user_access_token(lark_code)
+    else:
+        return "Get token fail"
 
 def get_token(app_id, app_secret):
     global tenant_access_token
