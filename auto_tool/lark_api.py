@@ -58,11 +58,12 @@ def get_token(app_id, app_secret):
     payload = {"app_id": app_id, "app_secret": app_secret}
     response = requests.session().post(url=url_access_token, json=payload)
     if response.status_code == 200:
-        dict = json.loads(response.content)
-        bean = TokenResponse(**dict)
-        if bean.code == 0:
-            tenant_access_token = bean.tenant_access_token
-            return bean
+        print("200")
+        # dict = json.loads(response.content)
+        # bean = TokenResponse(**dict)
+        # if bean.code == 0:
+        #     tenant_access_token = bean.tenant_access_token
+        #     return bean
 
 def get_tenant_headers():
     global tenant_access_token
