@@ -42,11 +42,7 @@ def on_ui_tabs():
                     result_panel = gr.Textbox(label="lark result")
                 with gr.Column():
                     get_lark_code = gr.Button(value="Get lark code")
-
-                    def open_code_website():
-                        webbrowser.open(getPreCodeUrl())
-
-                    get_lark_code.click(fn=open_code_website)
+                    get_lark_code.click(_js="redirectToLark", fn=None)
                     lark_code = gr.Textbox(label="Lark code", visible=(len(get_access_token()) == 0))
                     verify_lark = gr.Button(value="Verify lark code", visible=(len(get_access_token()) == 0))
                     lark_label = gr.Label(visible=(len(get_access_token()) != 0), value="Lark verify success")
