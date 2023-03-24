@@ -44,7 +44,7 @@ def on_ui_tabs():
                     get_lark_code = gr.Button(value="Get lark code")
 
                     def open_code_website():
-                        webbrowser.open_new_tab(getPreCodeUrl())
+                        webbrowser.open(getPreCodeUrl())
 
                     get_lark_code.click(fn=open_code_website)
                     lark_code = gr.Textbox(label="Lark code", visible=(len(get_access_token()) == 0))
