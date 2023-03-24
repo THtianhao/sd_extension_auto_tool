@@ -55,6 +55,7 @@ def get_or_refresh_save_user_token(lark_code: str):
 
 def get_token(app_id, app_secret):
     global tenant_access_token, url_access_token, url_lark_base
+
     print("accesstoken")
     print("accesstokenx")
     print("accesstokeny")
