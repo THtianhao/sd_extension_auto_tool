@@ -55,6 +55,8 @@ def get_or_refresh_save_user_token(lark_code: str):
 
 def getToken(app_id, app_secret):
     global tenant_access_token, url_access_token
+    print("access token")
+    print(url_access_token)
     payload = {"app_id": app_id, "app_secret": app_secret}
     response = requests.session().post(url=url_access_token, json=payload)
     if response.status_code == 200:
@@ -79,7 +81,7 @@ def get_user_headers():
     }
 
 def get_user_access_token(code):
-    global user_access_token
+    global user_access_token, url_user_token
     payload = {
         "grant_type": "authorization_code",
         "code": code
@@ -97,7 +99,7 @@ def get_user_access_token(code):
     return "Lark code expired, please get lark code again"
 
 def refresh_user_access_token(user_refresh_token):
-    global user_access_token
+    global user_access_token, url_refresh_token
     payload = {
         "grant_type": "refresh_token",
         "refresh_token": user_refresh_token
