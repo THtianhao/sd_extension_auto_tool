@@ -54,10 +54,12 @@ def get_or_refresh_save_user_token(lark_code: str):
         return "Get token fail"
 
 def getToken(app_id, app_secret):
-    global tenant_access_token, url_access_token
+    global tenant_access_token, url_access_token, url_lark_base
     print("access token")
     print(url_lark_base)
+    print("access token2")
     print(url_access_token)
+    print("access token2")
     payload = {"app_id": app_id, "app_secret": app_secret}
     response = requests.session().post(url=url_access_token, json=payload)
     if response.status_code == 200:
