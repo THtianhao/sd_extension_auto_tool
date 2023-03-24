@@ -9,6 +9,12 @@ from modules import extras, sd_samplers
 from modules.sd_models import list_models, checkpoints_list
 from modules.txt2img import txt2img
 
+stop_task = False
+
+def set_stop_task(stop):
+    global stop_task
+    stop_task = stop
+
 def stop_console_task():
     pass
 

@@ -21,6 +21,10 @@ tenant_access_token = ""
 user_access_token = ""
 user_lark_token_key = "lark_user_token"
 
+def get_access_token():
+    global user_access_token
+    return user_access_token
+
 def read_lark_config():
     global user_access_token
     if os.path.exists(auto_lark_config):
@@ -88,6 +92,7 @@ def get_user_access_token(code):
             user_access_token = bean.access_token
             save_lark_config(user_access_token)
             return "Lark verify success"
+    user_access_token = ""
     save_lark_config()
     return "Lark code expired, please get lark code again"
 
@@ -105,16 +110,22 @@ def refresh_user_access_token(user_refresh_token):
             user_access_token = bean.access_token
             save_lark_config(user_access_token)
             return "Refresh token success"
+    user_access_token = ""
     save_lark_config()
     return "Lark code expired,please get lark code again"
 
 def get_root_token():
+    global user_access_token
     response = requests.session().get(url=lark_get_root_token, headers=get_user_headers())
     if response.status_code == 200:
         content = json.loads(response.content)
         if content['code'] == 0:
             root_token = content['data']['token']
             return root_token
+    elif response.status_code == 400:
+        user_access_token = ""
+        save_lark_config(user_access_token)
+        return ""
 
 def create_sheet(name, root_token):
     payload = {

@@ -6,8 +6,9 @@ from datetime import datetime
 from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_console_task
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import task_list, refresh_task_list, read_task_json
 from extensions.sd_extension_auto_tool.auto_tool.ui_function import choose_task_fn, save_config, auto_delete_task, fill_choose_task
-from extensions.sd_extension_auto_tool.auto_tool.lark_api import  getPreCodeUrl, get_or_refresh_save_user_token, user_access_token, get_root_token, create_sheet, query_sheetId, \
-    put_sheet, post_image
+from extensions.sd_extension_auto_tool.auto_tool.lark_api import getPreCodeUrl, get_or_refresh_save_user_token, get_root_token, create_sheet, query_sheetId, \
+    put_sheet, post_image, get_access_token
+from extensions.sd_extension_auto_tool.bean.lark_task import LarkTask
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
 from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path
 from modules import script_callbacks, extras, sd_samplers, shared
@@ -33,11 +34,12 @@ def on_ui_tabs():
                     with gr.Row():
                         start_task = gr.Button(value="Start")
                         stop_task = gr.Button(value="Stop")
-                    task_log = gr.Label(value="aaa", visible=False)
+                    task_log = gr.Label(value="", visible=False)
                     with gr.Row():
                         choose_task = gr.Textbox(label="Choose Task", lines=3)
                         fill_task_button = ToolButton(value=fill_values_symbol, elem_id="Fill task button")
                         fill_task_button.click(fn=fill_choose_task, outputs=choose_task)
+                    result_panel = gr.Textbox(label="lark result")
                 with gr.Column():
                     get_lark_code = gr.Button(value="Get lark code")
 
@@ -45,17 +47,16 @@ def on_ui_tabs():
                         webbrowser.open_new_tab(getPreCodeUrl())
 
                     get_lark_code.click(fn=open_code_website)
-                    lark_code = gr.Textbox(label="Lark code", visible=(len(user_access_token) == 0))
-                    verify_lark = gr.Button(value="Verify lark code", visible=(len(user_access_token) == 0))
-                    lark_label = gr.Label(visible=(len(user_access_token) != 0), value="Lark verify success")
+                    lark_code = gr.Textbox(label="Lark code", visible=(len(get_access_token()) == 0))
+                    verify_lark = gr.Button(value="Verify lark code", visible=(len(get_access_token()) == 0))
+                    lark_label = gr.Label(visible=(len(get_access_token()) != 0), value="Lark verify success")
 
                     def verify_lark_code(code: str):
                         if len(code):
                             get_user_token_result = get_or_refresh_save_user_token(code)
                         else:
                             return {lark_label: gr.update(visible=True, value="Please input lark code first")}
-                        visible = len(user_access_token) == 0
-
+                        visible = len(get_access_token()) == 0
                         return {lark_code: gr.update(visible=visible),
                                 verify_lark: gr.update(visible=visible),
                                 lark_label: gr.update(visible=True, value=get_user_token_result)}
@@ -139,12 +140,14 @@ def on_ui_tabs():
                     at_after_finish]
 
         def start_console_task(tasks_name):
+            result_link_list = []
             tasks_split = tasks_name.split(', ')
             for task_name in tasks_split:
                 task_json = read_task_json(task_name)
                 config: AutoTaskConfig = AutoTaskConfig.parse_obj(task_json)
                 style_model_cut = config.task_merge.style_model.split('/')[-1].split('.')[0]
                 human_models = filter_human_models(config.task_merge.human_model_dir_flag)
+                lark_task = LarkTask()
                 if not human_models:
                     return gr.update(value=f"human models {config.task_merge.human_model_dir_flag} not exist", visible=True)
                 for human_index, human_model in enumerate(human_models):
@@ -152,46 +155,63 @@ def on_ui_tabs():
                     save_model_name = f"{style_model_cut}_{human_model_cut}_{str(config.task_merge.multiplier).replace('.', '_')}"
                     merge_task(human_model, style_model_cut, save_model_name, config.task_merge)
                     images = txt2img_task(human_model, config.task_txt2img)
-                    upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut)
+                    upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut, lark_task)
+                    if lark_task.error:
+                        return lark_task.error_message, ""
                     if config.task_merge.delete_after_merge:
                         delete_after_finish(style_model_cut)
+                result_link_list.append(lark_task.link)
+            link_result = ' '.join(result_link_list)
+            return "Finished", link_result
 
         def delete_after_finish(style_cut):
             path = os.path.join(auto_merge_model_path, style_cut)
             if os.path.exists(path):
                 shutil.rmtree(path)
 
-        def upload_lark(index, total_len, images, config: AutoTaskConfig, style_model_cut, human_model_cut):
-            file_token = None
-            sheet_id = None
-            links = []
-            if not config.task_lark.use_lark: return ""
-            if not len(images): return "Upload lark no image"
-            if not len(user_access_token): return "lark token is null"
+        def upload_lark(index, total_len, images, config: AutoTaskConfig, style_model_cut, human_model_cut, lark_task: LarkTask):
+            if not config.task_lark.use_lark:
+                lark_task.error = True
+                lark_task.error_message = "don't use lark"
+                return
+            if not len(images):
+                lark_task.error = True
+                lark_task.error_message = "Upload lark no image"
+                return
+            if not len(get_access_token()):
+                lark_task.error = True
+                lark_task.error_message = "lark token is nul"
+                return
             if index == 0:
-                file_token, sheet_id, link = create_lark_sheet(style_model_cut)
-                links.append(link)
-                upload_feishu(index, file_token, sheet_id, config, human_model_cut)
-                upload_images(index, file_token, sheet_id, images)
+                create_lark_sheet(style_model_cut, lark_task)
+                if lark_task.error:
+                    return
+            upload_feishu(index, lark_task, config, human_model_cut)
+            upload_images(index, lark_task, images)
             if index == total_len - 1:
-                at_when_finished(config.task_lark.at_user, file_token, sheet_id, index + 3)
+                at_when_finished(config.task_lark.at_user, lark_task, index + 3)
 
-        def create_lark_sheet(style_model_cut):
+        def create_lark_sheet(style_model_cut, lark_task: LarkTask):
             time_format = datetime.now().strftime("%H:%M:%S")
             feishu_folder_name = f'{style_model_cut}_{time_format}'
             root_token = get_root_token()
+            if root_token == "":
+                lark_task.error = True
+                return
             sheet = create_sheet(feishu_folder_name, root_token)
             file_token = sheet['spreadsheet_token']
             link = sheet['url']
             sheet_id = query_sheetId(file_token)
             create_sheet_title(file_token, sheet_id)
-            return file_token, sheet_id, link
+            lark_task.file_token = file_token
+            lark_task.sheet_id = sheet_id
+            lark_task.link = link
 
-        def upload_feishu(index, file_token, sheet_id, config: AutoTaskConfig, human_model_cut):
-            if file_token is not None:
+        def upload_feishu(index, lark_task, config: AutoTaskConfig, human_model_cut):
+            if lark_task.file_token is not None:
                 line = {
                     "valueRange": {
-                        "range": f"{sheet_id}!E{index + 2}:M{index + 2}",
+                        "range": f"{lark_task.sheet_id}!E{index + 2}:M{index + 2}",
                         "values": [
                             [
                                 human_model_cut,
@@ -207,7 +227,7 @@ def on_ui_tabs():
                         ]
                     }
                 }
-                put_sheet(file_token, line)
+                put_sheet(lark_task.file_token, line)
 
         def create_sheet_title(file_token, sheet_id):
             title = {
@@ -222,7 +242,7 @@ def on_ui_tabs():
             }
             put_sheet(file_token, title)
 
-        def upload_images(index, file_token, sheet_id, images):
+        def upload_images(index, lark_task, images):
             for image_index, image in enumerate(images):
                 column_flag = ""
                 if image_index == 0:
@@ -233,14 +253,14 @@ def on_ui_tabs():
                     column_flag = "C"
                 elif image_index == 3:
                     column_flag = "D"
-                post_image(file_token, f"{sheet_id}!{column_flag}{index + 2}:{column_flag}{index + 2}", image)
+                post_image(lark_task.file_token, f"{lark_task.sheet_id}!{column_flag}{index + 2}:{column_flag}{index + 2}", image)
 
-        def at_when_finished(at_email, file_token, sheet_id, line):
+        def at_when_finished(at_email, lark_task, line):
             if len(at_email) == 0:
                 return
             test_value = {
                 "valueRange": {
-                    "range": f"{sheet_id}!A{line}:A{line}",
+                    "range": f"{lark_task.sheet_id}!A{line}:A{line}",
                     "values": [
                         [
                             {
@@ -254,7 +274,7 @@ def on_ui_tabs():
                     ]
                 }
             }
-            put_sheet(file_token, test_value)
+            put_sheet(lark_task.file_token, test_value)
 
         def filter_human_models(filter):
             list_models()
@@ -380,12 +400,17 @@ def on_ui_tabs():
             images = processed.images
             return images
 
-        start_task.click(fn=start_console_task, inputs=choose_task, outputs=task_log)
+        def waiting_result():
+            return gr.update(visible=True, value="Waiting")
+
+        start_task.click(fn=start_console_task, inputs=choose_task, outputs=[task_log, result_panel])
+        start_task.click(fn=waiting_result, outputs=task_log)
         stop_task.click(fn=stop_console_task, outputs=task_log)
         use_lark.change(fn=is_show_lark, inputs=use_lark, outputs=use_lark_group)
         create_task.click(fn=save_config, inputs=all_para, outputs=create_hint)
         load_task.click(fn=choose_task_fn, inputs=select_task, outputs=all_para)
         delete_task.click(fn=auto_delete_task, inputs=select_task, outputs=create_hint)
-    return (auto_tool_interface, 'Auto Tool', 'auto_tool_tab'),
+
+        return (auto_tool_interface, 'Auto Tool', 'auto_tool_tab'),
 
 script_callbacks.on_ui_tabs(on_ui_tabs)

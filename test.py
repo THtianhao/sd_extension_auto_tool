@@ -1,7 +1,4 @@
-import json
 import os
-
-from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig
 from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path
 
 if __name__ == "__main__":
