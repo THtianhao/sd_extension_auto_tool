@@ -56,7 +56,7 @@ def get_or_refresh_save_user_token(lark_code: str):
 def get_token(app_id, app_secret):
     global tenant_access_token
     payload = {"app_id": app_id, "app_secret": app_secret}
-    response = requests.session().post(url="https://open.feishu.cn", json=payload)
+    response = requests.session().post(url=url_access_token, json=payload)
     if response.status_code == 200:
         dict = json.loads(response.content)
         bean = TokenResponse(**dict)
