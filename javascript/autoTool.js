@@ -6,7 +6,11 @@ function clear_loaded() {
 }
 
 function redirectToLark() {
-  window.open('https://open.feishu.cn/open-apis/authen/v1/index?app_id=cli_a483ea8b94e3100e&redirect_uri=http://127.0.0.1', '_blank');
+    window.open('https://open.feishu.cn/open-apis/authen/v1/index?app_id=cli_a483ea8b94e3100e&redirect_uri=http://127.0.0.1', '_blank');
+}
+
+function redirectToRul(url){
+    window.open(url, '_blank');
 }
 
 function filterArgs(argsCount, arguments) {
