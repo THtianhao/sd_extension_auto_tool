@@ -4,7 +4,7 @@ import shutil
 import webbrowser
 from datetime import datetime
 
-from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_console_task
+from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_console_task, get_stop_task
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import task_list, refresh_task_list, read_task_json
 from extensions.sd_extension_auto_tool.auto_tool.ui_function import choose_task_fn, save_config, auto_delete_task, fill_choose_task
 from extensions.sd_extension_auto_tool.auto_tool.lark_api import getPreCodeUrl, get_or_refresh_save_user_token, get_root_token, create_sheet, query_sheetId, \
@@ -161,16 +161,20 @@ def on_ui_tabs():
                     human_model_cut = human_model.split('/')[-1].split('.')[0]
                     save_model_name = f"{style_model_cut}_{human_model_cut}_{str(config.task_merge.multiplier).replace('.', '_')}"
                     merge_task(human_model, style_model_cut, save_model_name, config.task_merge)
+                    if get_stop_task():
+                        return "task stop", ""
                     set_model(save_model_name)
                     images = txt2img_task(human_model, config.task_txt2img)
+                    if get_stop_task():
+                        return "task stop", ""
                     upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut, lark_task)
                     if lark_task.error:
                         return lark_task.error_message, ""
                     if config.task_txt2img.delete_after_txt2img:
                         delete_after_finish(style_model_cut)
-                html_link = f"<p href='{lark_task.link}'>{config.task_merge.human_model_dir_flag}_{style_model_cut}_{config.task_merge.multiplier}</p>"
+                html_link = f"<a href='{lark_task.link}'>{config.task_merge.human_model_dir_flag}_{style_model_cut}_{config.task_merge.multiplier}</a>"
                 result_link_list.append(html_link)
-            link_result = ' '.join(result_link_list)
+            link_result = '<br>'.join(result_link_list)
             return "Finished", link_result
 
         def set_model(name):

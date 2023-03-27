@@ -15,8 +15,13 @@ def set_stop_task(stop):
     global stop_task
     stop_task = stop
 
+def get_stop_task():
+    global stop_task
+    return stop_task
+
 def stop_console_task():
-    pass
+    set_stop_task(True)
+
 
 def start_console_task(tasks_name):
     tasks_split = tasks_name.split(', ')
