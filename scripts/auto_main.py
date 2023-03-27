@@ -130,9 +130,9 @@ def on_ui_tabs():
                     human_folder_flag,
                     secondary_model_name,
                     tertiary_model_name,
-                    delete_model_after_txt2img,
                     multiplier,
                     use_txt2img,
+                    delete_model_after_txt2img,
                     prompt,
                     negative_prompt,
                     human_weight,
@@ -164,7 +164,7 @@ def on_ui_tabs():
                     upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut, lark_task)
                     if lark_task.error:
                         return lark_task.error_message, ""
-                    if config.task_merge.delete_after_merge:
+                    if config.task_merge.delete_after_txt2img:
                         delete_after_finish(style_model_cut)
                 print(lark_task.link)
                 result_link_list.append(lark_task.link)
@@ -422,16 +422,6 @@ def on_ui_tabs():
         use_lark.change(fn=is_show_lark, inputs=use_lark, outputs=use_lark_group)
         create_task.click(fn=save_config, inputs=all_para, outputs=create_hint)
         load_task.click(fn=choose_task_fn, inputs=select_task, outputs=all_para)
-        # def load_show_txt2img(enable):
-        #     with open(os.path.join(auto_tasks_path, f"{task_name}.json"), 'r') as f:
-        #         task_json = json.load(f)
-        #         task_config = AutoTaskConfig.parse_obj(task_json)
-        #         if task_config.task_config.task_txt2img.use_txt2img:
-        #             result = {}
-        #             for i in group_txt2img:
-        #                 result[i] = gr.update(visible=enable)
-        #             return result
-        # load_task.click(fn=load_show_txt2img, inputs=select_task, outputs=group_txt2img)
         delete_task.click(fn=auto_delete_task, inputs=select_task, outputs=create_hint)
         return (auto_tool_interface, 'Auto Tool', 'auto_tool_tab'),
 

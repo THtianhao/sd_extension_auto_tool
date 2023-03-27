@@ -16,9 +16,9 @@ def choose_task_fn(task_name):
                 gr.update(visible=True, value=task_config.task_merge.human_model_dir_flag),
                 gr.update(visible=True, value=task_config.task_merge.style_model),
                 gr.update(visible=True, value=task_config.task_merge.base_model_flag),
-                gr.update(visible=True, value=task_config.task_merge.delete_after_merge),
                 gr.update(visible=True, value=task_config.task_merge.multiplier),
                 gr.update(visible=True, value=task_config.task_txt2img.use_txt2img),
+                gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.delete_after_txt2img),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.prompt),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.negative_prompt),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.human_weight),
@@ -34,9 +34,9 @@ def save_config(task_name: str,
                 human_model_dir_flag: str,
                 style_model: str,
                 base_model_flag: str,
-                delete_after_merge: bool,
                 multiplier: float,
                 use_txt2img: bool,
+                delete_after_txt2img: bool,
                 prompt: str,
                 negative_prompt: str,
                 human_weight: float,
@@ -68,11 +68,11 @@ def save_config(task_name: str,
     task_config.task_merge.human_model_dir_flag = human_model_dir_flag
     task_config.task_merge.style_model = style_model
     task_config.task_merge.base_model_flag = base_model_flag
-    task_config.task_merge.delete_after_merge = delete_after_merge
     task_config.task_merge.interp_method = "Add difference"
     task_config.task_merge.multiplier = multiplier
     task_config.task_merge.checkpoint_format = "ckpt"
     task_config.task_txt2img.use_txt2img = use_txt2img
+    task_config.task_txt2img.delete_after_txt2img = delete_after_txt2img
     task_config.task_txt2img.prompt = prompt
     task_config.task_txt2img.negative_prompt = negative_prompt
     task_config.task_txt2img.human_weight = human_weight

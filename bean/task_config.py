@@ -9,7 +9,6 @@ class AutoTaskMerge(BaseModel):
     human_model_dir_flag: str = ""
     style_model: str = ""
     base_model_flag: str = ""
-    delete_after_merge: bool = False
     interp_method: str = ""
     multiplier: float = 1.0
     checkpoint_format: str = ""
@@ -19,6 +18,7 @@ class AutoTaskMerge(BaseModel):
 
 class AutoTaskTxt2Img(BaseModel):
     use_txt2img: bool = False
+    delete_after_txt2img: bool = False
     prompt: str = ""
     negative_prompt: str = ""
     human_weight: float = 1.0
