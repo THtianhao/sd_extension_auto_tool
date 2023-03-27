@@ -224,7 +224,7 @@ def on_ui_tabs():
             if lark_task.file_token is not None:
                 line = {
                     "valueRange": {
-                        "range": f"{lark_task.sheet_id}!E{index + 2}:M{index + 2}",
+                        "range": f"{lark_task.sheet_id}!F{index + 2}:N{index + 2}",
                         "values": [
                             [
                                 human_model_cut,
@@ -245,10 +245,10 @@ def on_ui_tabs():
         def create_sheet_title(file_token, sheet_id):
             title = {
                 "valueRange": {
-                    "range": f"{sheet_id}!A1:M1",
+                    "range": f"{sheet_id}!A1:N1",
                     "values": [
                         [
-                            "效果图1", "效果图2", "效果图3", "效果图4", "人物资源", "风格资源", "提示词", "反向提示词", "采样方式", "采样步数", "CFG Scale", "seed", "Checkpoint Multiplier"
+                            "效果图1", "效果图2", "效果图3", "效果图4", "效果图5" "人物资源", "风格资源", "提示词", "反向提示词", "采样方式", "采样步数", "CFG Scale", "seed", "Checkpoint Multiplier"
                         ]
                     ]
                 }
@@ -266,6 +266,8 @@ def on_ui_tabs():
                     column_flag = "C"
                 elif image_index == 3:
                     column_flag = "D"
+                elif image_index == 3:
+                    column_flag = "E"
                 post_image(lark_task.file_token, f"{lark_task.sheet_id}!{column_flag}{index + 2}:{column_flag}{index + 2}", image)
 
         def at_when_finished(at_email, lark_task, line):
