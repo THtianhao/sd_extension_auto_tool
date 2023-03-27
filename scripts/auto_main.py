@@ -150,15 +150,23 @@ def on_ui_tabs():
                     human_model_cut = human_model.split('/')[-1].split('.')[0]
                     save_model_name = f"{style_model_cut}_{human_model_cut}_{str(config.task_merge.multiplier).replace('.', '_')}"
                     merge_task(human_model, style_model_cut, save_model_name, config.task_merge)
+                    set_model(save_model_name)
                     images = txt2img_task(human_model, config.task_txt2img)
                     upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut, lark_task)
                     if lark_task.error:
                         return lark_task.error_message, ""
                     if config.task_merge.delete_after_merge:
                         delete_after_finish(style_model_cut)
+                print(lark_task.link)
                 result_link_list.append(lark_task.link)
             link_result = ' '.join(result_link_list)
             return "Finished", link_result
+
+        def set_model(name):
+            filter_model = [model.title for model in checkpoints_list.values() if name in model.title]
+            if len(filter_model):
+                shared.opts.set('sd_model_checkpoint', filter_model[0])
+                shared.opts.save(shared.config_filename)
 
         def delete_after_finish(style_cut):
             path = os.path.join(auto_merge_model_path, style_cut)
