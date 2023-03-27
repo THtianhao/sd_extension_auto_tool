@@ -41,7 +41,7 @@ def on_ui_tabs():
                         fill_task_button = ToolButton(value=fill_values_symbol, elem_id="Fill task button")
                         fill_task_button.click(fn=fill_choose_task, outputs=choose_task)
                     gr.HTML("<p>Result:</p>")
-                    result_panel = gr.HTML(label="lark result",value=f"<p href='https://www.example.com'>Click here to visit Example.com!</p> \n <p href='https://www.example.com'>Click here to visit Example.com!</p>" )
+                    result_panel = gr.HTML("No result")
                 with gr.Column():
                     get_lark_code = gr.Button(value="Get lark code")
                     get_lark_code.click(_js="redirectToLark", fn=None)
@@ -168,9 +168,9 @@ def on_ui_tabs():
                         return lark_task.error_message, ""
                     if config.task_txt2img.delete_after_txt2img:
                         delete_after_finish(style_model_cut)
-                html_link = f"<a href='{lark_task.link}'>{config.task_merge.human_model_dir_flag}_{style_model_cut}_{config.task_merge.multiplier}</a>"
+                html_link = f"<p href='{lark_task.link}'>{config.task_merge.human_model_dir_flag}_{style_model_cut}_{config.task_merge.multiplier}</p>"
                 result_link_list.append(html_link)
-            link_result = '\n'.join(result_link_list)
+            link_result = ' '.join(result_link_list)
             return "Finished", link_result
 
         def set_model(name):
