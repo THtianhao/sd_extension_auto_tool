@@ -10,7 +10,7 @@ from extensions.sd_extension_auto_tool.auto_tool.lark_api import getPreCodeUrl, 
     put_sheet, post_image, get_access_token
 from extensions.sd_extension_auto_tool.bean.lark_task import LarkTask
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
-from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path
+from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path, ckpt_dir
 from modules import script_callbacks, extras, sd_samplers, shared
 import gradio as gr
 
@@ -79,7 +79,15 @@ def on_ui_tabs():
                         with gr.Column():
                             gr.HTML(value="<span>merge config</span>")
                             with gr.Row():
-                                human_folder_flag = gr.Textbox(label="Human folder flag")
+                                def set_task_list():
+                                    list_dir = []
+                                    for root, dirs, files in os.walk(ckpt_dir):
+                                        for dir in dirs:
+                                            list_dir.append(dir)
+                                    return list_dir
+
+                                human_folder_flag = gr.Dropdown(set_task_list(), label="Merge folder flag")
+                                create_refresh_button(human_folder_flag, set_task_list, lambda: {"choices": set_task_list()}, "refresh_checkpoint_B")
                                 secondary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), label="Style model")
                                 create_refresh_button(secondary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "refresh_checkpoint_B")
                                 tertiary_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), label="Tertiary model")
