@@ -40,7 +40,8 @@ def on_ui_tabs():
                         choose_task = gr.Textbox(label="Choose Task", lines=3)
                         fill_task_button = ToolButton(value=fill_values_symbol, elem_id="Fill task button")
                         fill_task_button.click(fn=fill_choose_task, outputs=choose_task)
-                    result_panel = gr.Textbox(label="lark result")
+                    gr.HTML("<p>Result:</p>")
+                    result_panel = gr.HTML(label="lark result",value=f"<p href='https://www.example.com'>Click here to visit Example.com!</p> \n <p href='https://www.example.com'>Click here to visit Example.com!</p>" )
                 with gr.Column():
                     get_lark_code = gr.Button(value="Get lark code")
                     get_lark_code.click(_js="redirectToLark", fn=None)
@@ -146,9 +147,10 @@ def on_ui_tabs():
 
         def start_console_task(tasks_name):
             result_link_list = []
-            tasks_split = tasks_name.split(', ')
+            tasks_split = tasks_name.split(',')
+
             for task_name in tasks_split:
-                task_json = read_task_json(task_name)
+                task_json = read_task_json(task_name.strip())
                 config: AutoTaskConfig = AutoTaskConfig.parse_obj(task_json)
                 style_model_cut = config.task_merge.style_model.split('/')[-1].split('.')[0]
                 human_models = filter_human_models(config.task_merge.human_model_dir_flag)
@@ -166,9 +168,9 @@ def on_ui_tabs():
                         return lark_task.error_message, ""
                     if config.task_txt2img.delete_after_txt2img:
                         delete_after_finish(style_model_cut)
-                print(lark_task.link)
-                result_link_list.append(lark_task.link)
-            link_result = ' '.join(result_link_list)
+                html_link = f"<a href='{lark_task.link}'>{config.task_merge.human_model_dir_flag}_{style_model_cut}_{config.task_merge.multiplier}</a>"
+                result_link_list.append(html_link)
+            link_result = '\n'.join(result_link_list)
             return "Finished", link_result
 
         def set_model(name):
@@ -248,7 +250,7 @@ def on_ui_tabs():
                     "range": f"{sheet_id}!A1:N1",
                     "values": [
                         [
-                            "效果图1", "效果图2", "效果图3", "效果图4", "效果图5" "人物资源", "风格资源", "提示词", "反向提示词", "采样方式", "采样步数", "CFG Scale", "seed", "Checkpoint Multiplier"
+                            "效果图1", "效果图2", "效果图3", "效果图4", "效果图5", "人物资源", "风格资源", "提示词", "反向提示词", "采样方式", "采样步数", "CFG Scale", "seed", "Checkpoint Multiplier"
                         ]
                     ]
                 }
@@ -300,7 +302,7 @@ def on_ui_tabs():
             auto_style_dir = os.path.join(auto_merge_model_path, style_dir)
             if not os.path.exists(auto_style_dir):
                 os.makedirs(auto_style_dir)
-            file = os.path.join(auto_style_dir, f"{file_name}.ckpt")
+            file = os.path.join(auto_style_dir, file_name)
             filter_model = [model.title for model in checkpoints_list.values() if f"{file_name}.ckpt" in model.title]
             if len(filter_model):
                 print(f"File {os.path.join(style_dir, file_name)} already exist")
