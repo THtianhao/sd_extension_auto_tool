@@ -32,6 +32,7 @@ def read_lark_config():
             task_json = json.load(f)
             if task_json is not None:
                 user_access_token = task_json[user_lark_token_key]
+                get_or_refresh_save_user_token(user_access_token)
             return task_json
 
 def save_lark_config(token=""):
