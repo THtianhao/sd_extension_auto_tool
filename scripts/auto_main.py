@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import webbrowser
@@ -10,7 +11,7 @@ from extensions.sd_extension_auto_tool.auto_tool.lark_api import getPreCodeUrl, 
     put_sheet, post_image, get_access_token
 from extensions.sd_extension_auto_tool.bean.lark_task import LarkTask
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
-from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path, ckpt_dir
+from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path, ckpt_dir, auto_tasks_path
 from modules import script_callbacks, extras, sd_samplers, shared
 import gradio as gr
 
@@ -421,8 +422,17 @@ def on_ui_tabs():
         use_lark.change(fn=is_show_lark, inputs=use_lark, outputs=use_lark_group)
         create_task.click(fn=save_config, inputs=all_para, outputs=create_hint)
         load_task.click(fn=choose_task_fn, inputs=select_task, outputs=all_para)
+        # def load_show_txt2img(enable):
+        #     with open(os.path.join(auto_tasks_path, f"{task_name}.json"), 'r') as f:
+        #         task_json = json.load(f)
+        #         task_config = AutoTaskConfig.parse_obj(task_json)
+        #         if task_config.task_config.task_txt2img.use_txt2img:
+        #             result = {}
+        #             for i in group_txt2img:
+        #                 result[i] = gr.update(visible=enable)
+        #             return result
+        # load_task.click(fn=load_show_txt2img, inputs=select_task, outputs=group_txt2img)
         delete_task.click(fn=auto_delete_task, inputs=select_task, outputs=create_hint)
-
         return (auto_tool_interface, 'Auto Tool', 'auto_tool_tab'),
 
 script_callbacks.on_ui_tabs(on_ui_tabs)
