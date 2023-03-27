@@ -266,7 +266,7 @@ def on_ui_tabs():
                     column_flag = "C"
                 elif image_index == 3:
                     column_flag = "D"
-                elif image_index == 3:
+                elif image_index == 4:
                     column_flag = "E"
                 post_image(lark_task.file_token, f"{lark_task.sheet_id}!{column_flag}{index + 2}:{column_flag}{index + 2}", image)
 
