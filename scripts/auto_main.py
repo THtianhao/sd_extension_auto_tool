@@ -164,7 +164,7 @@ def on_ui_tabs():
                     upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut, lark_task)
                     if lark_task.error:
                         return lark_task.error_message, ""
-                    if config.task_merge.delete_after_txt2img:
+                    if config.task_txt2img.delete_after_txt2img:
                         delete_after_finish(style_model_cut)
                 print(lark_task.link)
                 result_link_list.append(lark_task.link)
