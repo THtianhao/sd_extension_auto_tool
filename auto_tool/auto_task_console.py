@@ -37,7 +37,6 @@ def start_console_task(tasks_name):
             human_model_cut = human_model.split('/')[-1].split('.')[0]
             save_model_name = f"AutoTool/{style_model_cut}/{style_model_cut}_{human_model_cut}"
             merge_task(human_model, save_model_name, config.task_merge)
-            txt2img_task(human_model, config.task_txt2img)
             # lark_task(human_model, config)
 
 def filter_human_models(filter):
@@ -65,51 +64,6 @@ def merge_task(human_model, name, merge: AutoTaskMerge):
                                     None,
                                     "")
     print(f"Merge {name} success")
-
-def txt2img_task(human_name, para: AutoTaskTxt2Img):
-    txt2img_prompt_styles = []
-    restore_faces = False,
-    tiling = False,
-    subseed = -1,
-    subseed_strength = 0.0,
-    seed_resize_from_h = -1,
-    seed_resize_from_w = -1,
-    seed_checkbox = False,
-    width = 512,
-    height = 512,
-    denoising_strength = 0.0
-    enable_hr = False,
-    hr_scale = 2,
-    hr_upscaler = "Latent",
-    hr_second_pass_steps = 0,
-    hr_resize_x = 0,
-    hr_resize_y = 0,
-    override_settings = {}
-    result = txt2img("",
-                     f"({human_name}:{para.human_weight}){para.prompt}",
-                     para.negative_prompt,
-                     txt2img_prompt_styles,
-                     para.steps,
-                     para.sampler_index,
-                     False,
-                     False,
-                     para.batch_count,
-                     para.batch_size,
-                     para.cfg_scale,
-
-                     para.seed,
-                     -1, 0.0, -1, -1, False,
-                     512,
-                     512,
-                     False,
-
-                     denoising_strength,
-                     2,
-                     "Latent",
-                     0,
-                     0,
-                     0,
-                     override_settings)
 
 def validate_sampler_name(name):
     config = sd_samplers.all_samplers_map.get(name, None)

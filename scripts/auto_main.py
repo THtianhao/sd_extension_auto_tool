@@ -1,13 +1,11 @@
-import json
 import os
 import shutil
-import webbrowser
 from datetime import datetime
 
-from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_console_task, get_stop_task
+from extensions.sd_extension_auto_tool.auto_tool.auto_task_console import stop_console_task, get_stop_task, set_stop_task
 from extensions.sd_extension_auto_tool.auto_tool.auto_tasks_file import task_list, refresh_task_list, read_task_json
 from extensions.sd_extension_auto_tool.auto_tool.ui_function import choose_task_fn, save_config, auto_delete_task, fill_choose_task
-from extensions.sd_extension_auto_tool.auto_tool.lark_api import getPreCodeUrl, get_or_refresh_save_user_token, get_root_token, create_sheet, query_sheetId, \
+from extensions.sd_extension_auto_tool.auto_tool.lark_api import get_or_refresh_save_user_token, get_root_token, create_sheet, query_sheetId, \
     put_sheet, post_image, get_access_token
 from extensions.sd_extension_auto_tool.bean.lark_task import LarkTask
 from extensions.sd_extension_auto_tool.bean.task_config import AutoTaskConfig, AutoTaskMerge, AutoTaskTxt2Img
@@ -101,13 +99,13 @@ def on_ui_tabs():
                         delete_model_after_txt2img = gr.Checkbox(label="Delete model after merge", visible=False)
                         prompt = gr.Textbox(label="Prompt", lines=3, visible=False)
                         negative_prompt = gr.Textbox(label="Negative prompt", lines=3, visible=False)
-                        human_weight = gr.Slider(minimum=0.0, maximum=2.0, step=0.1, label='human weight', value=1.0, elem_id="human_wight", visible=False)
+                        # human_weight = gr.Slider(minimum=0.0, maximum=2.0, step=0.1, label='human weight', value=1.0, elem_id="human_wight", visible=False)
                         seed = gr.Number(label="Seed", value=-1, visible=False)
                         cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='CFG Scale', value=7.0, elem_id="cfg_scale", visible=False)
                         batch_size = gr.Slider(minimum=1.0, maximum=8.0, step=1.0, label='Batch Size', value=1.0, elem_id="batch_size", visible=False)
                         sample_method = gr.Dropdown(label='Sampling method', choices=[x.name for x in samplers], value=samplers[0].name, type="index", visible=False)
                         sample_steps = gr.Slider(minimum=1.0, maximum=150.0, step=1.0, label='Sampling steps', value=20.0, elem_id="sample_step", visible=False)
-                        group_txt2img = [delete_model_after_txt2img, prompt, negative_prompt, human_weight, seed, cfg_scale, batch_size, sample_method, sample_steps, sample_steps]
+                        group_txt2img = [delete_model_after_txt2img, prompt, negative_prompt, seed, cfg_scale, batch_size, sample_method, sample_steps, sample_steps]
 
                         def is_show_txt2img(enable):
                             result = {}
@@ -136,7 +134,6 @@ def on_ui_tabs():
                     delete_model_after_txt2img,
                     prompt,
                     negative_prompt,
-                    human_weight,
                     seed,
                     cfg_scale,
                     sample_method,
@@ -162,10 +159,12 @@ def on_ui_tabs():
                     save_model_name = f"{style_model_cut}_{human_model_cut}_{str(config.task_merge.multiplier).replace('.', '_')}"
                     merge_task(human_model, style_model_cut, save_model_name, config.task_merge)
                     if get_stop_task():
+                        set_stop_task(False)
                         return "task stop", ""
                     set_model(save_model_name)
                     images = txt2img_task(human_model, config.task_txt2img)
                     if get_stop_task():
+                        set_stop_task(False)
                         return "task stop", ""
                     upload_lark(human_index, len(human_models), images, config, style_model_cut, human_model_cut, lark_task)
                     if lark_task.error:
@@ -383,7 +382,7 @@ def on_ui_tabs():
             script_name = None
             selectable_scripts, selectable_script_idx = get_selectable_script(script_name, script_runner)
             script_args = init_script_args([], selectable_scripts, selectable_script_idx, script_runner)
-            auto_prompt = f"({human_name}:{auto_para.human_weight}), {auto_para.prompt}"
+            auto_prompt = f"{auto_para.prompt.replace('%s', human_name)}"
             p = StableDiffusionProcessingTxt2Img(sd_model=shared.sd_model,
                                                  enable_hr=False,
                                                  denoising_strength=0.0,

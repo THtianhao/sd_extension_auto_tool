@@ -21,7 +21,6 @@ class AutoTaskTxt2Img(BaseModel):
     delete_after_txt2img: bool = False
     prompt: str = ""
     negative_prompt: str = ""
-    human_weight: float = 1.0
     seed: int = -1
     cfg_scale: float = 1.0
     sampler_index: int = 0

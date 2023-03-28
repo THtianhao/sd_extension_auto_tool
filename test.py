@@ -2,6 +2,9 @@ import os
 from extensions.sd_extension_auto_tool.utils.share import auto_merge_model_path, ckpt_dir
 
 if __name__ == "__main__":
+    strs = 'asdaskdjkljg ,sdfuhdyf im %s sdljfjioj %sdfsldk'
+    b = strs.replace('%s','=====')
+    print(b)
 
     def set_task_list():
         list_dir = []

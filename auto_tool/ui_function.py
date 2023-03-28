@@ -21,7 +21,6 @@ def choose_task_fn(task_name):
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.delete_after_txt2img),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.prompt),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.negative_prompt),
-                gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.human_weight),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.seed),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=task_config.task_txt2img.cfg_scale),
                 gr.update(visible=task_config.task_txt2img.use_txt2img, value=sd_samplers.samplers[task_config.task_txt2img.sampler_index].name),
@@ -39,7 +38,6 @@ def save_config(task_name: str,
                 delete_after_txt2img: bool,
                 prompt: str,
                 negative_prompt: str,
-                human_weight: float,
                 seed: int,
                 cfg_scale: int,
                 sampler_index: int,
@@ -75,7 +73,6 @@ def save_config(task_name: str,
     task_config.task_txt2img.delete_after_txt2img = delete_after_txt2img
     task_config.task_txt2img.prompt = prompt
     task_config.task_txt2img.negative_prompt = negative_prompt
-    task_config.task_txt2img.human_weight = human_weight
     task_config.task_txt2img.seed = seed
     task_config.task_txt2img.cfg_scale = cfg_scale
     task_config.task_txt2img.sampler_index = sampler_index
