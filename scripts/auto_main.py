@@ -162,7 +162,7 @@ def on_ui_tabs():
                         set_stop_task(False)
                         return "task stop", ""
                     set_model(save_model_name)
-                    images = txt2img_task(human_model, config.task_txt2img)
+                    images = txt2img_task(human_model_cut, config.task_txt2img)
                     if get_stop_task():
                         set_stop_task(False)
                         return "task stop", ""
