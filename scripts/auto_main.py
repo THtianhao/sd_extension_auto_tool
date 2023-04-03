@@ -189,7 +189,7 @@ def on_ui_tabs():
 
         def upload_lark(index, total_len, images, config: AutoTaskConfig, style_model_cut, human_model_cut, lark_task: LarkTask):
             if not config.task_lark.use_lark:
-                lark_task.error = True
+                lark_task.error = False
                 lark_task.error_message = "don't use lark"
                 return
             if not len(images):
